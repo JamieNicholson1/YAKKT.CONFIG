@@ -151,15 +151,41 @@ function yakkt_create_campervan_order($request) {
     // Set order status to pending
     $order->set_status('pending');
     
-    // Set order total
-    $order->set_total($total_price);
+    // IMPORTANT: Set all the order totals correctly
+    // This ensures both the line item and the order total match
+    $order->set_cart_tax(0);
+    $order->set_shipping_total(0);
+    $order->set_shipping_tax(0);
+    $order->set_discount_total(0);
+    $order->set_discount_tax(0);
+    $order->set_total($total_price); // Set the final total
 
-    // Add a billing email to avoid guest checkout issues
+    // Add billing information to avoid checkout issues
     $order->set_billing_email('guest@example.com');
+    $order->set_billing_first_name('Guest');
+    $order->set_billing_last_name('Customer');
+    
+    // Set payment method to direct bank transfer (or another available method)
+    $order->set_payment_method('bacs');
+    $order->set_payment_method_title('Direct Bank Transfer');
+    
+    // Calculate totals but don't recalculate prices (important!)
+    $order->calculate_totals(false);
+    
+    // Force update the order total again after calculate_totals
+    // This is necessary because calculate_totals might override our values
+    global $wpdb;
+    $wpdb->update(
+        $wpdb->prefix . 'wc_order_stats',
+        array('total_sales' => $total_price),
+        array('order_id' => $order->get_id())
+    );
     
     // Save the order
-    $order->calculate_totals();
     $order->save();
+    
+    // Update the post meta directly as a final fallback
+    update_post_meta($order->get_id(), '_order_total', $total_price);
 
     // Return the order ID and checkout URL
     return array(
