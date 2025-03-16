@@ -121,10 +121,16 @@ function yakkt_create_campervan_order($request) {
         return new WP_Error('invalid_product', 'Invalid product ID', array('status' => 400));
     }
     
+    // Add the product to the order
     $item_id = $order->add_product($product, 1);
     if (is_wp_error($item_id)) {
         return new WP_Error('add_product_error', 'Could not add product to order', array('status' => 500));
     }
+
+    // IMPORTANT: Update the product price to match the configurator price
+    // This is the key change to ensure the dynamic price is used
+    wc_update_order_item_meta($item_id, '_line_subtotal', $total_price);
+    wc_update_order_item_meta($item_id, '_line_total', $total_price);
 
     // Set line item meta with the config data
     wc_add_order_item_meta($item_id, '_chassis_id', $chassis);
@@ -142,9 +148,15 @@ function yakkt_create_campervan_order($request) {
         )
     );
 
+    // Set order status to pending
+    $order->set_status('pending');
+    
     // Set order total
     $order->set_total($total_price);
 
+    // Add a billing email to avoid guest checkout issues
+    $order->set_billing_email('guest@example.com');
+    
     // Save the order
     $order->calculate_totals();
     $order->save();
