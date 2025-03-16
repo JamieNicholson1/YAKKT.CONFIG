@@ -1,8 +1,6 @@
 import { VanOption } from '@/types/configurator';
 
-// This should be set in your environment variables
-const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://yakkt.com/wp-json';
-const WORDPRESS_API_KEY = process.env.NEXT_PUBLIC_WORDPRESS_API_KEY || '';
+// This is for client-side display only
 const WOOCOMMERCE_PRODUCT_ID = process.env.NEXT_PUBLIC_WOOCOMMERCE_PRODUCT_ID || '123';
 
 interface CheckoutPayload {
@@ -25,6 +23,7 @@ interface CheckoutResponse {
 
 /**
  * Creates a WooCommerce order with the configurator data
+ * Uses our proxy API route to avoid CORS issues
  */
 export const createOrder = async (
   chassisId: string,
@@ -45,24 +44,19 @@ export const createOrder = async (
       totalPrice: totalPrice
     };
 
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
+    console.log('Sending order to proxy:', payload);
 
-    // Add API key if available
-    if (WORDPRESS_API_KEY) {
-      headers['X-Yakkt-API-Key'] = WORDPRESS_API_KEY;
-    }
-
-    const response = await fetch(`${WORDPRESS_API_URL}/yakkt/v1/create-order`, {
+    // Use our proxy API route instead of WordPress directly
+    const response = await fetch('/api/proxy', {
       method: 'POST',
-      headers,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to create order');
+      console.error('Error response from proxy:', errorData);
+      throw new Error(errorData.error || errorData.message || 'Failed to create order');
     }
 
     return await response.json();
