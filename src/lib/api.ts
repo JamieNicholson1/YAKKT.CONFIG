@@ -67,8 +67,23 @@ export const createOrder = async (
 };
 
 /**
- * Redirects to the WooCommerce checkout page
+ * Redirects to the WooCommerce checkout page in the parent window
+ * This prevents the checkout from loading inside the iframe
  */
 export const redirectToCheckout = (checkoutUrl: string): void => {
-  window.location.href = checkoutUrl;
+  try {
+    // Check if we're in an iframe and window.top is accessible
+    if (window.self !== window.top && window.top) {
+      // We're in an iframe, redirect the parent window
+      window.top.location.href = checkoutUrl;
+    } else {
+      // We're not in an iframe or can't access window.top, redirect normally
+      window.location.href = checkoutUrl;
+    }
+  } catch (e) {
+    // If we can't access window.top due to cross-origin restrictions,
+    // fall back to normal redirect
+    console.warn('Could not access parent window, falling back to normal redirect');
+    window.location.href = checkoutUrl;
+  }
 }; 
