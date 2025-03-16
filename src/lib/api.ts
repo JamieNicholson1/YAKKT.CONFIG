@@ -71,19 +71,31 @@ export const createOrder = async (
  * This prevents the checkout from loading inside the iframe
  */
 export const redirectToCheckout = (checkoutUrl: string): void => {
-  try {
-    // Check if we're in an iframe and window.top is accessible
-    if (window.self !== window.top && window.top) {
-      // We're in an iframe, redirect the parent window
-      window.top.location.href = checkoutUrl;
-    } else {
-      // We're not in an iframe or can't access window.top, redirect normally
-      window.location.href = checkoutUrl;
+  // First try to detect if we're in an iframe
+  const isInIframe = (() => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      // If we can't access window.top due to cross-origin restrictions,
+      // assume we're in an iframe
+      return true;
     }
-  } catch (_) {
-    // If we can't access window.top due to cross-origin restrictions,
-    // fall back to normal redirect
-    console.warn('Could not access parent window, falling back to normal redirect');
-    window.location.href = checkoutUrl;
+  })();
+
+  // Try to redirect the parent window if we're in an iframe
+  if (isInIframe) {
+    try {
+      // Check if window.top is accessible
+      if (window.top) {
+        window.top.location.href = checkoutUrl;
+        return;
+      }
+    } catch {
+      // Silently catch any errors and fall through to the default redirect
+      console.warn('Could not access parent window, falling back to normal redirect');
+    }
   }
+
+  // Default redirect if we're not in an iframe or can't access the parent
+  window.location.href = checkoutUrl;
 }; 
