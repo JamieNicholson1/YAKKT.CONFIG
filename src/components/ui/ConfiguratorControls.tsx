@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import useConfiguratorStore from '@/store/configurator';
 import { VanOption } from '@/types/configurator';
-import { ChevronDown, ChevronUp, Palette, Car, Cog, Package, Truck, Wrench, Check } from 'lucide-react';
+import { ChevronDown, ChevronUp, Palette, Car, Cog, Package, Truck, Wrench } from 'lucide-react';
 
 const ConfiguratorControls: React.FC = () => {
   const {

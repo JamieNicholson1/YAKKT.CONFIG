@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Group } from 'three';
 import useConfiguratorStore from '@/store/configurator';
@@ -13,7 +13,7 @@ interface VanModelProps {
 
 const VanModel: React.FC<VanModelProps> = ({ chassisId, selectedOptionIds }) => {
   const groupRef = useRef<Group>(null);
-  const { chassis, options } = useConfiguratorStore();
+  const { options } = useConfiguratorStore();
 
   // Optional: Add some subtle animation
   useFrame((state) => {
@@ -34,7 +34,7 @@ const VanModel: React.FC<VanModelProps> = ({ chassisId, selectedOptionIds }) => 
 
       {/* Roof options */}
       {Array.from(selectedOptionIds)
-        .filter(id => options.find(opt => opt.id === id)?.category === 'roof')
+        .filter(id => options.find(opt => opt.id === id)?.category === 'roof-racks')
         .map(id => (
           <group key={id} position={[0, 1, 0]}>
             <PlaceholderModel scale={0.8} color="#666666" />
@@ -52,7 +52,7 @@ const VanModel: React.FC<VanModelProps> = ({ chassisId, selectedOptionIds }) => 
 
       {/* Carrier options */}
       {Array.from(selectedOptionIds)
-        .filter(id => options.find(opt => opt.id === id)?.category === 'carrier')
+        .filter(id => options.find(opt => opt.id === id)?.category === 'rear-accessories')
         .map(id => (
           <group key={id} position={[0, 0.5, -2]}>
             <PlaceholderModel scale={0.3} color="#555555" />

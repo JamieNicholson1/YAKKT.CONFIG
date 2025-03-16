@@ -11,12 +11,9 @@ import useCheckout from '@/hooks/useCheckout';
 const ConfiguratorLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'configure' | 'summary'>('configure');
   const { priceData, chassisId } = useConfiguratorStore();
-  const { totalPrice, addOnPrices } = priceData;
+  const { totalPrice } = priceData;
   const { isLoading, error, handleCheckout } = useCheckout();
   
-  // Calculate total from add-ons only (ignoring chassis price)
-  const addOnsTotal = Object.values(addOnPrices).reduce((sum: number, price: number) => sum + price, 0);
-
   // Handle checkout button click
   const handleCheckoutClick = () => {
     handleCheckout();

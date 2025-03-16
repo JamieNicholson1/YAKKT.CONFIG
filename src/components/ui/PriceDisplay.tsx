@@ -7,15 +7,13 @@ interface PriceDisplayProps {
 
 const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
   const { priceData, options } = useConfiguratorStore();
-  const { totalPrice, chassisPrice, addOnPrices } = priceData;
+  const { totalPrice, addOnPrices } = priceData;
 
   // Helper function to get option name from ID
   const getOptionName = (id: string): string => {
     const option = options.find(opt => opt.id === id);
     return option ? option.name : id;
   };
-
-  const addOnsTotal = Object.values(addOnPrices).reduce((sum: number, price: number) => sum + price, 0);
 
   if (detailed) {
     return (

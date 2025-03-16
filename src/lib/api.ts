@@ -1,4 +1,4 @@
-import { Chassis, VanOption } from '@/types/configurator';
+import { VanOption } from '@/types/configurator';
 
 // This should be set in your environment variables
 const WORDPRESS_API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://yakkt.com/wp-json';

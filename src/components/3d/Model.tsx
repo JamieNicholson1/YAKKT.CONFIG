@@ -2,7 +2,7 @@
 
 import { useGLTF } from '@react-three/drei';
 import { Vector3, Euler } from 'three';
-import { useState } from 'react';
+import { useEffect } from 'react';
 
 interface ModelProps {
   modelPath: string;
@@ -12,23 +12,26 @@ interface ModelProps {
 }
 
 export const Model = ({ modelPath, position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 }: ModelProps) => {
-  const [error, setError] = useState<string | null>(null);
+  const { scene } = useGLTF(modelPath);
   
-  try {
-    const { scene } = useGLTF(modelPath);
-    
-    return (
-      <primitive 
-        object={scene} 
-        position={position}
-        rotation={rotation}
-        scale={scale}
-      />
-    );
-  } catch (err) {
-    console.warn(`Error loading model ${modelPath}:`, err);
+  useEffect(() => {
+    if (!scene) {
+      console.warn(`Error loading model ${modelPath}`);
+    }
+  }, [modelPath, scene]);
+  
+  if (!scene) {
     return null;
   }
+  
+  return (
+    <primitive 
+      object={scene} 
+      position={position}
+      rotation={rotation}
+      scale={scale}
+    />
+  );
 };
 
 // Pre-load the models we know exist
