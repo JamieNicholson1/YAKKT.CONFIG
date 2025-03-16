@@ -80,7 +80,7 @@ export const redirectToCheckout = (checkoutUrl: string): void => {
       // We're not in an iframe or can't access window.top, redirect normally
       window.location.href = checkoutUrl;
     }
-  } catch (e) {
+  } catch (_) {
     // If we can't access window.top due to cross-origin restrictions,
     // fall back to normal redirect
     console.warn('Could not access parent window, falling back to normal redirect');
