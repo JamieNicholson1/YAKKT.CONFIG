@@ -112,87 +112,133 @@ function yakkt_create_campervan_order($request) {
         return new WP_Error('missing_data', 'Missing required data', array('status' => 400));
     }
 
-    // Create the order
-    $order = wc_create_order();
-
-    // Add the line item for the "Configurable Campervan" product
-    $product = wc_get_product($product_id);
-    if (!$product) {
-        return new WP_Error('invalid_product', 'Invalid product ID', array('status' => 400));
-    }
+    // Create a detailed configuration summary
+    $config_summary = "Campervan Configuration - " . $chassis_name;
     
-    // Add the product to the order
-    $item_id = $order->add_product($product, 1);
-    if (is_wp_error($item_id)) {
-        return new WP_Error('add_product_error', 'Could not add product to order', array('status' => 500));
+    // Add component details to the summary
+    if (!empty($components)) {
+        $component_names = array_column($components, 'name');
+        $config_summary .= " with " . implode(', ', $component_names);
     }
 
-    // IMPORTANT: Update the product price to match the configurator price
-    // This is the key change to ensure the dynamic price is used
-    wc_update_order_item_meta($item_id, '_line_subtotal', $total_price);
-    wc_update_order_item_meta($item_id, '_line_total', $total_price);
+    try {
+        // Create the order
+        $order = wc_create_order();
 
-    // Set line item meta with the config data
-    wc_add_order_item_meta($item_id, '_chassis_id', $chassis);
-    wc_add_order_item_meta($item_id, '_chassis_name', $chassis_name);
-    wc_add_order_item_meta($item_id, '_components', json_encode($components));
-    wc_add_order_item_meta($item_id, '_calculated_total_price', $total_price);
+        // Get the product
+        $product = wc_get_product($product_id);
+        if (!$product) {
+            return new WP_Error('invalid_product', 'Invalid product ID', array('status' => 400));
+        }
+        
+        // Add the product to the order with the custom name
+        $item_id = $order->add_product($product, 1, array(
+            'name' => $config_summary, // Custom product name with configuration details
+        ));
+        
+        if (is_wp_error($item_id)) {
+            return new WP_Error('add_product_error', 'Could not add product to order', array('status' => 500));
+        }
 
-    // Add a note to the order
-    $order->add_order_note(
-        sprintf(
-            'Campervan Configuration: Chassis: %s, Components: %s, Total Price: £%s',
-            $chassis_name,
-            implode(', ', array_column($components, 'name')),
-            number_format($total_price, 2)
-        )
-    );
+        // IMPORTANT: Update the product price to match the configurator price
+        wc_update_order_item_meta($item_id, '_line_subtotal', $total_price);
+        wc_update_order_item_meta($item_id, '_line_total', $total_price);
 
-    // Set order status to pending
-    $order->set_status('pending');
-    
-    // IMPORTANT: Set all the order totals correctly
-    // This ensures both the line item and the order total match
-    $order->set_cart_tax(0);
-    $order->set_shipping_total(0);
-    $order->set_shipping_tax(0);
-    $order->set_discount_total(0);
-    $order->set_discount_tax(0);
-    $order->set_total($total_price); // Set the final total
+        // Store configuration details as meta data
+        wc_add_order_item_meta($item_id, '_chassis_id', $chassis);
+        wc_add_order_item_meta($item_id, '_chassis_name', $chassis_name);
+        wc_add_order_item_meta($item_id, '_components', json_encode($components));
+        wc_add_order_item_meta($item_id, '_calculated_total_price', $total_price);
 
-    // Add billing information to avoid checkout issues
-    $order->set_billing_email('guest@example.com');
-    $order->set_billing_first_name('Guest');
-    $order->set_billing_last_name('Customer');
-    
-    // Set payment method to direct bank transfer (or another available method)
-    $order->set_payment_method('bacs');
-    $order->set_payment_method_title('Direct Bank Transfer');
-    
-    // Calculate totals but don't recalculate prices (important!)
-    $order->calculate_totals(false);
-    
-    // Force update the order total again after calculate_totals
-    // This is necessary because calculate_totals might override our values
-    global $wpdb;
-    $wpdb->update(
-        $wpdb->prefix . 'wc_order_stats',
-        array('total_sales' => $total_price),
-        array('order_id' => $order->get_id())
-    );
-    
-    // Save the order
-    $order->save();
-    
-    // Update the post meta directly as a final fallback
-    update_post_meta($order->get_id(), '_order_total', $total_price);
+        // Add a detailed note to the order
+        $order->add_order_note(
+            sprintf(
+                'Campervan Configuration: Chassis: %s, Components: %s, Total Price: £%s',
+                $chassis_name,
+                implode(', ', array_column($components, 'name')),
+                number_format($total_price, 2)
+            )
+        );
 
-    // Return the order ID and checkout URL
-    return array(
-        'success' => true,
-        'orderId' => $order->get_id(),
-        'checkoutUrl' => $order->get_checkout_payment_url()
-    );
+        // Set order status to pending
+        $order->set_status('pending');
+        
+        // Add billing information
+        $order->set_billing_email('guest@example.com');
+        $order->set_billing_first_name('Guest');
+        $order->set_billing_last_name('Customer');
+        
+        // Set payment method
+        $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
+        if (!empty($available_gateways)) {
+            // Use the first available payment gateway
+            $gateway_id = key($available_gateways);
+            $order->set_payment_method($gateway_id);
+            $order->set_payment_method_title($available_gateways[$gateway_id]->get_title());
+        } else {
+            // Fallback to direct bank transfer
+            $order->set_payment_method('bacs');
+            $order->set_payment_method_title('Direct Bank Transfer');
+        }
+        
+        // CRITICAL: Set the order total directly in the database
+        // This is the most reliable way to ensure the correct total
+        global $wpdb;
+        
+        // First save the order to get an ID
+        $order->save();
+        $order_id = $order->get_id();
+        
+        // Update the order total in post meta
+        update_post_meta($order_id, '_order_total', $total_price);
+        
+        // Update the order total in the order items table
+        $wpdb->query($wpdb->prepare(
+            "UPDATE {$wpdb->prefix}woocommerce_order_items 
+            SET order_item_type = %s 
+            WHERE order_id = %d AND order_item_type = %s",
+            'line_item',
+            $order_id,
+            'line_item'
+        ));
+        
+        // Update the order stats table
+        $wpdb->update(
+            $wpdb->prefix . 'wc_order_stats',
+            array('total_sales' => $total_price),
+            array('order_id' => $order_id)
+        );
+        
+        // Force WooCommerce to recalculate the order
+        $order = wc_get_order($order_id);
+        $order->calculate_totals(false);
+        $order->save();
+        
+        // Final check and update if needed
+        if ($order->get_total() != $total_price) {
+            // If still not correct, update directly
+            $wpdb->update(
+                $wpdb->posts,
+                array('post_excerpt' => "Total: £" . number_format($total_price, 2)),
+                array('ID' => $order_id)
+            );
+            
+            // Update one more time
+            update_post_meta($order_id, '_order_total', $total_price);
+            $order->set_total($total_price);
+            $order->save();
+        }
+
+        // Return the order ID and checkout URL
+        return array(
+            'success' => true,
+            'orderId' => $order_id,
+            'checkoutUrl' => $order->get_checkout_payment_url()
+        );
+        
+    } catch (Exception $e) {
+        return new WP_Error('order_creation_error', $e->getMessage(), array('status' => 500));
+    }
 }
 
 /**
