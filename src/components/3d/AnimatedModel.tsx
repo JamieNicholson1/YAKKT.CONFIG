@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { useSpring, animated } from '@react-spring/three';
 import { Vector3, Euler, Group, Mesh, MeshStandardMaterial } from 'three';
 import { useGLTF } from '@react-three/drei';
@@ -202,6 +202,9 @@ export const AnimatedModel = ({
         // Skip shadow casting for small meshes on low performance devices
         child.castShadow = lowPerformanceMode ? 
           (castShadow && meshVolume > 0.1) : castShadow;
+          
+        // Enable receiving shadows on all meshes
+        child.receiveShadow = true;
       }
     });
   }, [clonedScene, castShadow, lowPerformanceMode]);

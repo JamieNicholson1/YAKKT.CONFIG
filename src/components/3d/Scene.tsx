@@ -1,12 +1,39 @@
 'use client';
 
-import { Canvas, useThree } from '@react-three/fiber';
-import { Stage, OrbitControls, useProgress, useGLTF, BakeShadows } from '@react-three/drei';
-import { Suspense, useState, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
+import React, { Suspense, useState, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import useConfiguratorStore from '@/store/configurator';
-import { Model } from '@/components/3d';
-import { AnimatedModel } from '@/components/3d/AnimatedModel';
 import { LoadingIndicator } from '@/components/3d/LoadingIndicator';
+
+// Dynamically import components that depend on @react-three/fiber with ssr disabled
+const DynamicCanvas = dynamic(() => import('@react-three/fiber').then(mod => mod.Canvas), { 
+  ssr: false 
+});
+
+const DynamicStage = dynamic(() => import('@react-three/drei').then(mod => mod.Stage), { 
+  ssr: false 
+});
+
+const DynamicOrbitControls = dynamic(() => import('@react-three/drei').then(mod => mod.OrbitControls), { 
+  ssr: false 
+});
+
+const DynamicBakeShadows = dynamic(() => import('@react-three/drei').then(mod => mod.BakeShadows), { 
+  ssr: false 
+});
+
+const DynamicUseGLTF = dynamic(() => import('@react-three/drei').then(mod => mod.useGLTF), { 
+  ssr: false 
+});
+
+// Import AnimatedModel with dynamic import
+const AnimatedModel = dynamic(() => import('@/components/3d/AnimatedModel').then(mod => mod.AnimatedModel), { 
+  ssr: false 
+});
+
+// For types only
+import type { useThree, Canvas } from '@react-three/fiber';
+import type { Stage, OrbitControls, useProgress, BakeShadows } from '@react-three/drei';
 
 const LoadingSpinner = () => (
   <mesh>
@@ -15,39 +42,50 @@ const LoadingSpinner = () => (
   </mesh>
 );
 
-// Screenshot capture component
-const ScreenshotHandler = ({ onReady }: { onReady: (capture: () => string) => void }) => {
-  const { gl, scene, camera } = useThree();
+// Screenshot capture component - dynamically imported
+const ScreenshotHandler = dynamic(() => 
+  Promise.resolve(({ onReady }: { onReady: (capture: () => string) => void }) => {
+    // Import useThree hook dynamically within component
+    const useThreeHook = require('@react-three/fiber').useThree;
+    const { gl, scene, camera } = useThreeHook();
 
-  useEffect(() => {
-    const captureScreenshot = () => {
-      // Ensure the scene is rendered
-      gl.render(scene, camera);
-      
-      // Get the canvas data
-      return gl.domElement.toDataURL('image/png');
-    };
+    useEffect(() => {
+      const captureScreenshot = () => {
+        // Ensure the scene is rendered
+        gl.render(scene, camera);
+        
+        // Get the canvas data
+        return gl.domElement.toDataURL('image/png');
+      };
 
-    onReady(captureScreenshot);
-  }, [gl, scene, camera, onReady]);
+      onReady(captureScreenshot);
+    }, [gl, scene, camera, onReady]);
 
-  return null;
-};
+    return null;
+  }),
+  { ssr: false }
+);
 
 export interface SceneRef {
   captureScreenshot: () => string;
 }
 
-// Loading manager component
-const LoadingManager = ({ children }: { children: React.ReactNode }) => {
-  const { progress } = useProgress();
-  return (
-    <>
-      <LoadingIndicator progress={progress} />
-      {children}
-    </>
-  );
-};
+// Loading manager component - dynamically imported
+const LoadingManager = dynamic(() => 
+  Promise.resolve(({ children }: { children: React.ReactNode }) => {
+    // Import useProgress hook dynamically within component
+    const useProgressHook = require('@react-three/drei').useProgress;
+    const { progress } = useProgressHook();
+    
+    return (
+      <>
+        <LoadingIndicator progress={progress} />
+        {children}
+      </>
+    );
+  }),
+  { ssr: false }
+);
 
 const Scene = forwardRef<SceneRef>((props, ref) => {
   const [isClient, setIsClient] = useState(false);
@@ -113,17 +151,26 @@ const Scene = forwardRef<SceneRef>((props, ref) => {
     [options, selectedOptionIds]
   );
 
-  // Preload used models
+  // Preload models on client side only
   useEffect(() => {
-    if (selectedChassis) {
-      useGLTF.preload(selectedChassis.modelUrl);
-    }
+    if (!isClient) return;
     
-    selectedOptions.forEach(option => {
-      const modelUrls = Array.isArray(option.modelUrl) ? option.modelUrl : [option.modelUrl];
-      modelUrls.forEach(url => useGLTF.preload(url));
-    });
-  }, [selectedChassis, selectedOptions]);
+    // Import and use GLTF loader dynamically on client side
+    const preloadModels = async () => {
+      const { useGLTF } = await import('@react-three/drei');
+      
+      if (selectedChassis) {
+        useGLTF.preload(selectedChassis.modelUrl);
+      }
+      
+      selectedOptions.forEach(option => {
+        const modelUrls = Array.isArray(option.modelUrl) ? option.modelUrl : [option.modelUrl];
+        modelUrls.forEach(url => useGLTF.preload(url));
+      });
+    };
+    
+    preloadModels();
+  }, [selectedChassis, selectedOptions, isClient]);
 
   // Calculate optimal shadow settings based on performance
   const shadowSettings = useMemo(() => ({
@@ -148,7 +195,7 @@ const Scene = forwardRef<SceneRef>((props, ref) => {
 
   return (
     <div className="w-full h-full">
-      <Canvas 
+      <DynamicCanvas 
         shadows
         camera={{ position: [8, 4, 8], fov: 50 }}
         gl={{ 
@@ -197,7 +244,7 @@ const Scene = forwardRef<SceneRef>((props, ref) => {
           <meshStandardMaterial color="#f8f8f8" />
         </mesh>
 
-        <Stage
+        <DynamicStage
           adjustCamera={false}
           shadows="contact"
           intensity={0.1}
@@ -235,12 +282,12 @@ const Scene = forwardRef<SceneRef>((props, ref) => {
               })}
             </LoadingManager>
           </Suspense>
-        </Stage>
+        </DynamicStage>
 
         {/* Performance optimization: bake shadows into a texture */}
-        <BakeShadows />
+        <DynamicBakeShadows />
 
-        <OrbitControls
+        <DynamicOrbitControls
           makeDefault
           minPolarAngle={0}
           maxPolarAngle={Math.PI / 2}
@@ -248,16 +295,10 @@ const Scene = forwardRef<SceneRef>((props, ref) => {
           maxDistance={15}
           enableDamping={true}
           dampingFactor={0.1}
-          rotateSpeed={isMobile ? 0.3 : 0.5}
-          zoomSpeed={isMobile ? 0.3 : 0.5}
-          target={[0, 0, 0]}
-          enablePan={true}
-          panSpeed={isMobile ? 0.3 : 0.5}
-          zoomToCursor={true}
-          enableRotate={true}
           enableZoom={true}
+          enablePan={false}
         />
-      </Canvas>
+      </DynamicCanvas>
     </div>
   );
 });

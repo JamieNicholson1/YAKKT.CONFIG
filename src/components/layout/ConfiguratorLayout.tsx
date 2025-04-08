@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import Scene, { SceneRef } from '@/components/3d/Scene';
+import dynamic from 'next/dynamic';
+// Import types only
+import type { SceneRef } from '@/components/3d/Scene';
 import ConfiguratorControls from '@/components/ui/ConfiguratorControls';
 import PriceDisplay from '@/components/ui/PriceDisplay';
 import { ShoppingCart, Loader2, Camera, X, Check, ChevronUp, ChevronDown, Share2, Save, Users, Download, Link, Instagram, Mail } from 'lucide-react';
@@ -14,6 +16,16 @@ import BuildCard from '@/components/ui/BuildCard';
 import SavingsBanner from '@/components/ui/SavingsBanner';
 import useCommunityBuilds from '@/hooks/useCommunityBuilds';
 import { toast } from '@/components/ui/use-toast';
+
+// Dynamically import Scene component with ssr disabled
+const Scene = dynamic(() => import('@/components/3d/Scene'), { 
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+      <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  )
+});
 
 const ConfiguratorLayout: React.FC = () => {
   // Feature flags for easy toggling - uncomment to enable
