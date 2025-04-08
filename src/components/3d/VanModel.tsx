@@ -52,7 +52,7 @@ const VanModel: React.FC<VanModelProps> = ({ chassisId, selectedOptionIds }) => 
 
       {/* Carrier options */}
       {Array.from(selectedOptionIds)
-        .filter(id => options.find(opt => opt.id === id)?.category === 'rear-accessories')
+        .filter(id => options.find(opt => opt.id === id)?.category === 'rear-door-carriers')
         .map(id => (
           <group key={id} position={[0, 0.5, -2]}>
             <PlaceholderModel scale={0.3} color="#555555" />

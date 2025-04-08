@@ -1,7 +1,49 @@
 import React, { useEffect, useState } from 'react';
 import useConfiguratorStore from '@/store/configurator';
 import { VanOption } from '@/types/configurator';
-import { ChevronDown, ChevronUp, Palette, Car, Cog, Package, Truck, Wrench } from 'lucide-react';
+import { 
+  ChevronDown, 
+  ChevronUp, 
+  Palette, 
+  Square, 
+  Cog, 
+  PackageOpen, 
+  Package, 
+  Truck, 
+  Wrench,
+  ShieldCheck,
+  CircleDot
+} from 'lucide-react';
+
+const CATEGORY_GROUPS = {
+  base: ['chassis'],
+  exterior: ['windows', 'wheels', 'exterior-accessories'],
+  storage: ['roof-racks', 'roof-rack-accessories', 'rear-door-carriers', 'rear-door-accessories']
+};
+
+const GROUP_NAMES = {
+  base: 'Base Configuration',
+  exterior: 'Exterior Options',
+  storage: 'Storage & Accessories'
+};
+
+// Add keyframes for the pulsate animation
+const styles = `
+@keyframes pulsate {
+  0% { 
+    background-color: transparent;
+    box-shadow: inset 0 0 0 0 rgba(251, 191, 36, 0);
+  }
+  50% { 
+    background-color: rgba(251, 191, 36, 0.25);
+    box-shadow: inset 0 0 20px rgba(251, 191, 36, 0.15);
+  }
+  100% { 
+    background-color: transparent;
+    box-shadow: inset 0 0 0 0 rgba(251, 191, 36, 0);
+  }
+}
+`;
 
 const ConfiguratorControls: React.FC = () => {
   const {
@@ -14,10 +56,7 @@ const ConfiguratorControls: React.FC = () => {
     setInitialData,
   } = useConfiguratorStore();
 
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
-    chassis: true, // Open chassis section by default
-  });
-  const [selectedColor, setSelectedColor] = useState('White');
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
   // Load initial data
   useEffect(() => {
@@ -34,44 +73,17 @@ const ConfiguratorControls: React.FC = () => {
       options: [
         // Windows and Flares
         {
-          id: 'offside-window',
-          name: 'Offside Window',
-          price: 350,
-          modelUrl: '/models/van-models/mwb-crafter/windows-and-flares/offside-window.glb',
-          category: 'windows' as const,
-          isExclusive: false,
-          conflictsWith: [],
-          description: 'Offside window installation',
-        },
-        {
-          id: 'nearside-window',
-          name: 'Nearside Window',
-          price: 350,
-          modelUrl: '/models/van-models/mwb-crafter/windows-and-flares/nearside-window.glb',
-          category: 'windows' as const,
-          isExclusive: false,
-          conflictsWith: [],
-          description: 'Nearside window installation',
-        },
-        {
-          id: 'flares-with-windows',
-          name: 'Flares with Windows',
-          price: 800,
-          modelUrl: '/models/van-models/mwb-crafter/windows-and-flares/flares-with-windows.glb',
+          id: 'flares',
+          name: 'Flares',
+          price: 950,
+          modelUrl: [
+            '/models/van-models/mwb-crafter/windows-and-flares/flaresns.glb',
+            '/models/van-models/mwb-crafter/windows-and-flares/flaresos.glb'
+          ],
           category: 'windows' as const,
           isExclusive: true,
-          conflictsWith: ['flares-without-windows'],
-          description: 'Wheel arch flares with windows',
-        },
-        {
-          id: 'flares-without-windows',
-          name: 'Flares without Windows',
-          price: 600,
-          modelUrl: '/models/van-models/mwb-crafter/windows-and-flares/flares-without-windows.glb',
-          category: 'windows' as const,
-          isExclusive: true,
-          conflictsWith: ['flares-with-windows'],
-          description: 'Wheel arch flares without windows',
+          conflictsWith: [],
+          description: 'Wheel arch flares',
         },
 
         // Wheels
@@ -87,7 +99,7 @@ const ConfiguratorControls: React.FC = () => {
         },
         {
           id: 'black-rhino-wheels',
-          name: 'Black Rhino AT Wheels',
+          name: 'Black Rhino Warlord BFG AT',
           price: 2000,
           modelUrl: '/models/van-models/mwb-crafter/wheels/black-rhino-at.glb',
           category: 'wheels' as const,
@@ -98,81 +110,223 @@ const ConfiguratorControls: React.FC = () => {
 
         // Roof Racks
         {
-          id: 'roof-rack-front-rear-fairing',
-          name: 'Front & Rear Fairing Rack',
-          price: 1200,
-          modelUrl: '/models/van-models/mwb-crafter/roof-racks/roof-rack-front-rear-fairing.glb',
+          id: 'roof-rack-base',
+          name: 'Base Rack',
+          price: 1850,
+          modelUrl: [
+            '/models/van-models/mwb-crafter/roof-racks/carrier-supports.glb',
+            '/models/van-models/mwb-crafter/roof-racks/front-fairing.glb',
+            '/models/van-models/mwb-crafter/roof-racks/rear-fairing.glb',
+            '/models/van-models/mwb-crafter/roof-racks/right-rails.glb',
+            '/models/van-models/mwb-crafter/roof-racks/left-rails.glb'
+          ],
           category: 'roof-racks' as const,
           isExclusive: true,
-          conflictsWith: ['roof-rack-full-deck', 'roof-rack-deck-maxxfan-front', 'roof-rack-deck-maxxfan-rear'],
-          description: 'Roof rack with front and rear fairings',
+          conflictsWith: [],
+          description: 'Base roof rack system with supports, fairings, and rails',
         },
+
+        // Deck Panels
         {
-          id: 'roof-rack-full-deck',
-          name: 'Full Deck Roof Rack',
-          price: 1500,
-          modelUrl: '/models/van-models/mwb-crafter/roof-racks/roof-rack-full-deck.glb',
-          category: 'roof-racks' as const,
+          id: 'full-deck',
+          name: 'Full Deck',
+          price: 1800,
+          modelUrl: [
+            '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-front.glb',
+            '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-middle.glb',
+            '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-back.glb'
+          ],
+          category: 'deck-panels' as const,
           isExclusive: true,
-          conflictsWith: ['roof-rack-front-rear-fairing', 'roof-rack-deck-maxxfan-front', 'roof-rack-deck-maxxfan-rear'],
+          conflictsWith: ['full-deck-rear-maxxfan', 'rear-deck', 'middle-deck', 'front-deck', 'rear-deck-maxxfan'],
+          dependsOn: ['roof-rack-base'],
           description: 'Full deck roof rack system',
         },
         {
-          id: 'fiamma-awning',
-          name: 'Fiamma F45s Awning',
-          price: 800,
-          modelUrl: '/models/van-models/mwb-crafter/roof-racks/rack-accessories/fiammaf45s-awning-closed.glb',
-          category: 'roof-racks' as const,
-          subCategory: 'rack-accessories' as const,
-          isExclusive: false,
-          conflictsWith: [],
-          description: 'Fiamma F45s retractable awning',
+          id: 'full-deck-rear-maxxfan',
+          name: 'Full Deck Rear MaxxFan',
+          price: 1800,
+          modelUrl: [
+            '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-front.glb',
+            '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-middle.glb',
+            '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-panels-maxxfan-rear.glb'
+          ],
+          category: 'deck-panels' as const,
+          isExclusive: true,
+          conflictsWith: ['full-deck', 'rear-deck', 'middle-deck', 'front-deck', 'rear-deck-maxxfan'],
+          dependsOn: ['roof-rack-base'],
+          description: 'Full deck roof rack with rear Maxxfan installation',
+        },
+        {
+          id: 'rear-deck',
+          name: 'Rear Deck',
+          price: 600,
+          modelUrl: '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-back.glb',
+          category: 'deck-panels' as const,
+          isExclusive: true,
+          conflictsWith: ['full-deck', 'full-deck-rear-maxxfan', 'middle-deck', 'front-deck', 'rear-deck-maxxfan'],
+          dependsOn: ['roof-rack-base'],
+          description: 'Rear section deck panel',
+        },
+        {
+          id: 'rear-deck-maxxfan',
+          name: 'Rear Deck Rear MaxxFan',
+          price: 550,
+          modelUrl: '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-panels-maxxfan-rear.glb',
+          category: 'deck-panels' as const,
+          isExclusive: true,
+          conflictsWith: ['full-deck', 'full-deck-rear-maxxfan', 'rear-deck', 'middle-deck', 'front-deck'],
+          dependsOn: ['roof-rack-base'],
+          description: 'Rear deck with Maxxfan installation',
+        },
+        {
+          id: 'middle-deck',
+          name: 'Middle Deck',
+          price: 600,
+          modelUrl: '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-middle.glb',
+          category: 'deck-panels' as const,
+          isExclusive: true,
+          conflictsWith: ['full-deck', 'full-deck-rear-maxxfan', 'rear-deck', 'front-deck', 'rear-deck-maxxfan'],
+          dependsOn: ['roof-rack-base'],
+          description: 'Middle section deck panel',
+        },
+        {
+          id: 'front-deck',
+          name: 'Front Deck',
+          price: 600,
+          modelUrl: '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-front.glb',
+          category: 'deck-panels' as const,
+          isExclusive: true,
+          conflictsWith: ['full-deck', 'full-deck-rear-maxxfan', 'rear-deck', 'middle-deck', 'rear-deck-maxxfan'],
+          dependsOn: ['roof-rack-base'],
+          description: 'Front section deck panel',
         },
 
-        // Rear Door Accessories
+        // Roof Rack Accessories
+        {
+          id: 'awning-brackets',
+          name: 'Awning Brackets',
+          price: 175,
+          modelUrl: '/models/van-models/mwb-crafter/roof-racks/rack-accessories/awning-brackets.glb',
+          category: 'roof-rack-accessories' as const,
+          isExclusive: false,
+          conflictsWith: [],
+          dependsOn: ['roof-rack-base'],
+          description: 'Mounting brackets for awning installation',
+        },
+        {
+          id: 'fiamma-awning',
+          name: 'Fiamma F45s Awning 3.2m Black/Anthra',
+          price: 800,
+          modelUrl: '/models/van-models/mwb-crafter/roof-racks/rack-accessories/fiammaf45s-awning-closed.glb',
+          category: 'roof-rack-accessories' as const,
+          isExclusive: false,
+          conflictsWith: [],
+          dependsOn: ['roof-rack-base', 'full-deck', 'full-deck-rear-maxxfan', 'rear-deck', 'middle-deck', 'front-deck'],
+          description: 'Fiamma F45s retractable awning',
+        },
+        {
+          id: 'roof-rack-ladder',
+          name: 'Side Ladder',
+          price: 950,
+          modelUrl: '/models/van-models/mwb-crafter/roof-racks/rack-accessories/ladder.glb',
+          category: 'roof-rack-accessories' as const,
+          isExclusive: false,
+          conflictsWith: [],
+          dependsOn: ['roof-rack-base', 'full-deck', 'full-deck-rear-maxxfan', 'rear-deck', 'middle-deck', 'front-deck'],
+          description: 'Access ladder for roof rack',
+        },
+        {
+          id: 'l-track-eyelets',
+          name: '10x L-Track Eyelets',
+          price: 20,
+          modelUrl: '/models/van-models/mwb-crafter/roof-racks/rack-accessories/l-track-eyelets.glb',
+          category: 'roof-rack-accessories' as const,
+          isExclusive: false,
+          conflictsWith: [],
+          dependsOn: ['roof-rack-base'],
+          description: 'Set of 10 L-Track mounting eyelets',
+        },
+
+        // Rear Door Carriers
         {
           id: 'nearside-mini-carrier',
-          name: 'Nearside Mini Carrier',
-          price: 400,
-          modelUrl: '/models/van-models/mwb-crafter/rear-door-accessories/nearside/minicarrier.glb',
-          category: 'rear-accessories' as const,
+          name: 'NS Mini Carrier',
+          price: 670,
+          modelUrl: '/models/van-models/mwb-crafter/rear-door-carriers/ns-minicarrier.glb',
+          category: 'rear-door-carriers' as const,
           subCategory: 'nearside' as const,
           isExclusive: true,
           conflictsWith: ['nearside-midi-carrier'],
           description: 'Nearside mini storage carrier',
         },
         {
+          id: 'offside-mini-carrier',
+          name: 'OS Mini Carrier',
+          price: 670,
+          modelUrl: '/models/van-models/mwb-crafter/rear-door-carriers/os-minicarrier.glb',
+          category: 'rear-door-carriers' as const,
+          subCategory: 'offside' as const,
+          isExclusive: true,
+          conflictsWith: ['offside-midi-carrier'],
+          description: 'Offside mini storage carrier',
+        },
+        {
           id: 'nearside-midi-carrier',
-          name: 'Nearside Midi Carrier',
-          price: 600,
-          modelUrl: '/models/van-models/mwb-crafter/rear-door-accessories/nearside/midicarrier.glb',
-          category: 'rear-accessories' as const,
+          name: 'NS Midi Carrier',
+          price: 1200,
+          modelUrl: '/models/van-models/mwb-crafter/rear-door-carriers/ns-midicarrier.glb',
+          category: 'rear-door-carriers' as const,
           subCategory: 'nearside' as const,
           isExclusive: true,
           conflictsWith: ['nearside-mini-carrier'],
           description: 'Nearside midi storage carrier',
         },
         {
+          id: 'offside-midi-carrier',
+          name: 'OS Midi Carrier',
+          price: 1200,
+          modelUrl: '/models/van-models/mwb-crafter/rear-door-carriers/os-midicarrier.glb',
+          category: 'rear-door-carriers' as const,
+          subCategory: 'offside' as const,
+          isExclusive: true,
+          conflictsWith: ['offside-mini-carrier'],
+          description: 'Offside midi storage carrier',
+        },
+
+        // Rear Door Accessories
+        {
           id: 'wheel-carrier',
-          name: 'Spare Wheel Carrier',
-          price: 300,
+          name: 'Wheel Carrier Module',
+          price: 450,
           modelUrl: '/models/van-models/mwb-crafter/rear-door-accessories/options/wheel-carrier.glb',
-          category: 'rear-accessories' as const,
+          category: 'rear-door-accessories' as const,
           isExclusive: false,
           conflictsWith: [],
+          dependsOn: ['nearside-mini-carrier', 'nearside-midi-carrier', 'offside-mini-carrier', 'offside-midi-carrier'],
           description: 'Rear door spare wheel carrier',
         },
 
         // Exterior Accessories
         {
-          id: 'snorkel',
-          name: 'Snorkel',
-          price: 450,
-          modelUrl: '/models/van-models/mwb-crafter/exterior-accessories/snorkel.glb',
+          id: 'bravo-snorkel',
+          name: 'Bravo Snorkel',
+          price: 495,
+          modelUrl: '/models/van-models/mwb-crafter/exterior-accessories/bravo-snorkel.glb',
           category: 'exterior-accessories' as const,
           isExclusive: false,
           conflictsWith: [],
-          description: 'Raised air intake snorkel',
+          description: 'Bravo raised air intake snorkel',
+        },
+        {
+          id: 'front-bull-bar',
+          name: 'Front Bull Bar',
+          price: 680,
+          modelUrl: '/models/van-models/mwb-crafter/exterior-accessories/front-bull-bar.glb',
+          category: 'exterior-accessories' as const,
+          isExclusive: false,
+          conflictsWith: [],
+          description: 'Heavy-duty front bull bar protection',
         },
       ],
     };
@@ -182,6 +336,11 @@ const ConfiguratorControls: React.FC = () => {
 
   const handleChassisChange = (id: string) => {
     setChassis(id);
+    // Close the chassis category specifically
+    setOpenCategories(prev => ({
+      ...prev,
+      chassis: false
+    }));
   };
 
   const handleOptionToggle = (option: VanOption) => {
@@ -217,8 +376,9 @@ const ConfiguratorControls: React.FC = () => {
       'windows': 'Windows & Flares',
       'wheels': 'Wheels',
       'roof-racks': 'Roof Racks',
-      'rack-accessories': 'Rack Accessories',
-      'rear-accessories': 'Rear Door Accessories',
+      'roof-rack-accessories': 'Roof Rack Accessories',
+      'rear-door-carriers': 'Rear Door Carriers',
+      'rear-door-accessories': 'Rear Door Accessories',
       'exterior-accessories': 'Exterior Accessories'
     };
     return names[category] || category;
@@ -227,164 +387,215 @@ const ConfiguratorControls: React.FC = () => {
   const getCategoryIcon = (category: string) => {
     const icons: Record<string, React.ReactNode> = {
       'chassis': <Truck className="w-5 h-5" />,
-      'color': <Palette className="w-5 h-5" />,
-      'windows': <Car className="w-5 h-5" />,
-      'wheels': <Cog className="w-5 h-5" />,
-      'roof-racks': <Package className="w-5 h-5" />,
-      'rack-accessories': <Package className="w-5 h-5" />,
-      'rear-accessories': <Package className="w-5 h-5" />,
-      'exterior-accessories': <Wrench className="w-5 h-5" />
+      'windows': <Square className="w-5 h-5" />,
+      'wheels': <CircleDot className="w-5 h-5" />,
+      'roof-racks': <PackageOpen className="w-5 h-5" />,
+      'roof-rack-accessories': <Package className="w-5 h-5" />,
+      'rear-door-carriers': <Package className="w-5 h-5" />,
+      'rear-door-accessories': <Wrench className="w-5 h-5" />,
+      'exterior-accessories': <ShieldCheck className="w-5 h-5" />
     };
     return icons[category] || <Package className="w-5 h-5" />;
   };
 
-  return (
-    <div className="space-y-6 font-mono">
-      {/* Chassis Selection */}
-      <div className="space-y-3">
-        <div className="rounded-lg border border-gray-200 overflow-hidden">
-          <button
-            onClick={() => toggleCategory('chassis')}
-            className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors duration-200"
-          >
-            <div className="flex items-center space-x-3">
-              <Truck className="w-5 h-5 text-gray-700" />
-              <span className="text-gray-900 uppercase font-medium tracking-wide">Vehicle Model</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              {chassisId && (
-                <div className="bg-green-50 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-medium">
-                  Selected
-                </div>
-              )}
-              {openCategories['chassis'] ? (
-                <ChevronUp className="w-5 h-5 text-gray-500" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-500" />
-              )}
-            </div>
-          </button>
-        </div>
+  // Add this new function to check if an option is available
+  const isOptionAvailable = (option: VanOption): boolean => {
+    if (!option.dependsOn) return true;
+    return option.dependsOn.some(dependencyId => selectedOptionIds.has(dependencyId));
+  };
 
-        {openCategories['chassis'] && (
-          <div className="rounded-lg border border-gray-200 overflow-hidden">
-            <div className="p-4 space-y-3">
-              {chassis.map((item) => (
+  // Add this function to render deck panel options
+  const renderDeckPanels = () => {
+    const deckPanelOptions = options.filter(option => option.category === 'deck-panels');
+    const isBaseRackSelected = selectedOptionIds.has('roof-rack-base');
+
+    if (!isBaseRackSelected) {
+      return (
+        <div className="text-sm text-gray-500 italic text-center px-4 py-3">
+          Please Select Base Rack First
+        </div>
+      );
+    }
+
+    return deckPanelOptions.map((option) => {
+      const isAvailable = isOptionAvailable(option);
+      return (
+        <button
+          key={option.id}
+          onClick={() => handleOptionToggle(option)}
+          className={`w-full px-4 py-3 transition-all duration-200 ${
+            selectedOptionIds.has(option.id)
+              ? 'bg-amber-50 text-amber-700'
+              : isAvailable
+                ? 'text-gray-900 hover:bg-gray-50'
+                : 'text-gray-400 cursor-not-allowed'
+          }`}
+          disabled={!chassisId || !isAvailable}
+        >
+          <div className="flex justify-between items-center">
+            <div className="font-medium text-left text-sm">{option.name}</div>
+            <div className={`font-medium text-sm ${selectedOptionIds.has(option.id) ? 'text-amber-600' : 'text-gray-600'} min-w-[100px] text-right`}>
+              {option.price === 0 ? 'Base Model' : `+ £${option.price.toLocaleString()}`}
+            </div>
+          </div>
+        </button>
+      );
+    });
+  };
+
+  return (
+    <div className="space-y-2 font-mono">
+      {/* Add the styles */}
+      <style>{styles}</style>
+      
+      {Object.entries(CATEGORY_GROUPS).map(([groupKey, categories]) => (
+        <div key={groupKey} className="space-y-0">
+          {categories.map(category => {
+            const categoryOptions = groupedOptions[category] || [];
+            const isChassis = category === 'chassis';
+            const isRoofRacks = category === 'roof-racks';
+            const shouldPulsate = isChassis && !chassisId;
+            
+            return (
+              <div key={category} className="border-b border-gray-200">
                 <button
-                  key={item.id}
-                  onClick={() => handleChassisChange(item.id)}
-                  className={`w-full p-3 rounded-md transition-all duration-200 ${
-                    chassisId === item.id
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-white text-gray-900 hover:bg-gray-50'
-                  }`}
+                  onClick={() => toggleCategory(category)}
+                  className={`
+                    w-full flex items-center justify-between py-4 px-4
+                    transition-all duration-300 ease-in-out 
+                    hover:bg-gray-50 active:scale-[0.99]
+                    ${shouldPulsate ? 'animate-[pulsate_2s_ease-in-out_infinite] rounded-lg' : ''}
+                  `}
                 >
-                  <div className="flex items-center justify-start">
-                    <div className="font-medium text-left text-sm">{item.name}</div>
+                  <div className="flex items-center space-x-3">
+                    {getCategoryIcon(category)}
+                    <span className={`text-gray-900 uppercase tracking-wide text-sm ${shouldPulsate ? 'text-amber-600' : ''}`}>
+                      {getCategoryName(category)}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {(isChassis ? chassisId : isCategorySelected(category)) && (
+                      <div className="bg-green-50 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-medium animate-fadeIn">
+                        Selected
+                      </div>
+                    )}
+                    <div className={`transform transition-all duration-300 ease-spring ${openCategories[category] ? 'rotate-180' : ''}`}>
+                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                    </div>
                   </div>
                 </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+                
+                <div 
+                  className={`
+                    transition-all duration-500 ease-spring 
+                    ${openCategories[category] 
+                      ? 'max-h-[1000px] opacity-100 scale-y-100' 
+                      : 'max-h-0 opacity-0 scale-y-95'
+                    } 
+                    overflow-hidden
+                  `}
+                >
+                  <div className="transform transition-all duration-300 ease-spring origin-top">
+                    <div className="py-2">
+                      {isChassis ? (
+                        // Chassis selection
+                        <div className="space-y-1">
+                          {chassis.map((item) => (
+                            <button
+                              key={item.id}
+                              onClick={() => handleChassisChange(item.id)}
+                              className={`
+                                w-full px-4 py-3 
+                                transition-all duration-200 
+                                hover:bg-gray-50 
+                                active:scale-[0.99]
+                                ${chassisId === item.id
+                                  ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                  : 'text-gray-900'
+                                }
+                              `}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div className="font-medium text-left text-sm">{item.name}</div>
+                                <div className={`font-medium text-sm ${chassisId === item.id ? 'text-amber-600' : 'text-gray-600'}`}>
+                                  Base Model
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        // Regular options
+                        <div className="space-y-1">
+                          {categoryOptions.map((option) => {
+                            const isAvailable = isOptionAvailable(option);
+                            const isSelected = selectedOptionIds.has(option.id);
+                            return (
+                              <button
+                                key={option.id}
+                                onClick={() => handleOptionToggle(option)}
+                                className={`
+                                  w-full px-4 py-3 
+                                  transition-all duration-200 
+                                  ${isSelected
+                                    ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                    : isAvailable
+                                      ? 'text-gray-900 hover:bg-gray-50'
+                                      : 'text-gray-400 cursor-not-allowed'
+                                  }
+                                  active:scale-[0.99]
+                                `}
+                                disabled={!chassisId || !isAvailable}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div className="font-medium text-left text-sm">{option.name}</div>
+                                  <div className={`
+                                    font-medium text-sm min-w-[100px] text-right
+                                    ${isSelected ? 'text-amber-600' : 'text-gray-600'}
+                                  `}>
+                                    {option.price === 0 ? 'Base Model' : `+ £${option.price.toLocaleString()}`}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
 
-      {/* Color Selection */}
-      <div className="space-y-3">
-        <div className="rounded-lg border border-gray-200 overflow-hidden">
-          <button
-            onClick={() => toggleCategory('color')}
-            className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors duration-200"
-          >
-            <div className="flex items-center space-x-3">
-              <Palette className="w-5 h-5 text-gray-700" />
-              <span className="text-gray-900 uppercase font-medium tracking-wide">Vehicle Colour</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              {selectedColor && (
-                <div className="bg-green-50 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-medium">
-                  Selected
-                </div>
-              )}
-              {openCategories['color'] ? (
-                <ChevronUp className="w-5 h-5 text-gray-500" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-500" />
-              )}
-            </div>
-          </button>
-        </div>
+                          {/* Show Deck Panels as sub-category under Roof Racks */}
+                          {isRoofRacks && selectedOptionIds.has('roof-rack-base') && (
+                            <div className="mt-4 border-t border-gray-200 animate-fadeIn">
+                              <div className="px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50/80 backdrop-blur-sm">
+                                Deck Panels
+                              </div>
+                              <div className="space-y-1">
+                                {renderDeckPanels()}
+                              </div>
+                            </div>
+                          )}
 
-        {openCategories['color'] && (
-          <div className="rounded-lg border border-gray-200 overflow-hidden">
-            <div className="p-4">
-              <select 
-                value={selectedColor}
-                onChange={(e) => setSelectedColor(e.target.value)}
-                className="w-full p-3 border border-gray-200 rounded-md font-mono text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="White">White</option>
-                <option value="Black">Black</option>
-                <option value="Silver">Silver</option>
-                <option value="Gray">Gray</option>
-              </select>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Options Selection */}
-      <div className="space-y-3">
-        {Object.entries(groupedOptions).map(([category, categoryOptions]) => (
-          <div key={category} className="rounded-lg border border-gray-200 overflow-hidden">
-            <button
-              onClick={() => toggleCategory(category)}
-              className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 transition-colors duration-200"
-            >
-              <div className="flex items-center space-x-3">
-                {getCategoryIcon(category)}
-                <span className="text-gray-900 uppercase font-medium tracking-wide">{getCategoryName(category)}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                {isCategorySelected(category) && (
-                  <div className="bg-green-50 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-medium">
-                    Selected
-                  </div>
-                )}
-                {openCategories[category] ? (
-                  <ChevronUp className="w-5 h-5 text-gray-500" />
-                ) : (
-                  <ChevronDown className="w-5 h-5 text-gray-500" />
-                )}
-              </div>
-            </button>
-            
-            {openCategories[category] && (
-              <div className="p-4 space-y-3 bg-white border-t border-gray-200">
-                {categoryOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    onClick={() => handleOptionToggle(option)}
-                    className={`w-full p-3 rounded-md transition-all duration-200 ${
-                      selectedOptionIds.has(option.id)
-                        ? 'bg-amber-50 text-amber-700'
-                        : 'bg-white text-gray-900 hover:bg-gray-50'
-                    }`}
-                    disabled={!chassisId}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div className="font-medium text-left text-sm">{option.name}</div>
-                      <div className={`font-medium text-sm ${selectedOptionIds.has(option.id) ? 'text-amber-600' : 'text-gray-600'}`}>
-                        +£{option.price.toLocaleString()}
-                      </div>
+                          {category === 'roof-rack-accessories' && !selectedOptionIds.has('roof-rack-base') && (
+                            <div className="text-sm text-gray-500 italic text-center px-4 py-3 animate-fadeIn">
+                              Please Select A Roof Rack
+                            </div>
+                          )}
+                          {category === 'rear-door-accessories' && 
+                            !(selectedOptionIds.has('nearside-mini-carrier') || 
+                              selectedOptionIds.has('nearside-midi-carrier') || 
+                              selectedOptionIds.has('offside-mini-carrier') || 
+                              selectedOptionIds.has('offside-midi-carrier')) && (
+                            <div className="text-sm text-gray-500 italic text-center px-4 py-3 animate-fadeIn">
+                              Please Select A Rear Door Carrier
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  </button>
-                ))}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 };

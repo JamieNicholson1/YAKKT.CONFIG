@@ -2,23 +2,61 @@
 
 import { useGLTF } from '@react-three/drei';
 import { Vector3, Euler } from 'three';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useLoader } from '@react-three/fiber';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 interface ModelProps {
   modelPath: string;
   position?: Vector3 | [number, number, number];
   rotation?: Euler | [number, number, number];
   scale?: number | [number, number, number];
+  castShadow?: boolean;
 }
 
-export const Model = ({ modelPath, position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 }: ModelProps) => {
-  const { scene } = useGLTF(modelPath);
+// Configure DRACO loader for better compression
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('/draco/');
+
+// Configure GLTF loader with DRACO support
+const gltfLoader = new GLTFLoader();
+gltfLoader.setDRACOLoader(dracoLoader);
+
+export const Model = ({ modelPath, position = [0, 0, 0], rotation = [0, 0, 0], scale = 1, castShadow = true }: ModelProps) => {
+  // Use useLoader for better control over loading process
+  const gltf = useLoader(GLTFLoader, modelPath, (loader) => {
+    loader.setDRACOLoader(dracoLoader);
+  });
+  
+  // Clone the scene to avoid modifying the original
+  const scene = useMemo(() => gltf.scene.clone(), [gltf.scene]);
   
   useEffect(() => {
     if (!scene) {
       console.warn(`Error loading model ${modelPath}`);
+      return;
     }
-  }, [modelPath, scene]);
+
+    // Apply optimizations and shadows
+    scene.traverse((child: any) => {
+      if (child.isMesh) {
+        child.castShadow = castShadow;
+        child.frustumCulled = true; // Enable frustum culling
+        
+        // Optimize geometries
+        if (child.geometry) {
+          child.geometry.computeBoundingSphere();
+          child.geometry.computeBoundingBox();
+        }
+        
+        // Optimize materials
+        if (child.material) {
+          child.material.dispose();
+        }
+      }
+    });
+  }, [modelPath, scene, castShadow]);
   
   if (!scene) {
     return null;
@@ -30,22 +68,17 @@ export const Model = ({ modelPath, position = [0, 0, 0], rotation = [0, 0, 0], s
       position={position}
       rotation={rotation}
       scale={scale}
+      dispose={null} // Prevent automatic disposal
     />
   );
 };
 
-// Pre-load the models we know exist
-useGLTF.preload('/models/van-models/mwb-crafter/chassis/chassis.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/windows-and-flares/offside-window.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/windows-and-flares/nearside-window.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/windows-and-flares/flares-with-windows.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/windows-and-flares/flares-without-windows.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/wheels/standard.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/wheels/black-rhino-at.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/roof-racks/roof-rack-front-rear-fairing.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/roof-racks/roof-rack-full-deck.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/roof-racks/rack-accessories/fiammaf45s-awning-closed.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/rear-door-accessories/nearside/minicarrier.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/rear-door-accessories/nearside/midicarrier.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/rear-door-accessories/options/wheel-carrier.glb');
-useGLTF.preload('/models/van-models/mwb-crafter/exterior-accessories/snorkel.glb'); 
+// Preload essential models only
+const essentialModels = [
+  '/models/van-models/mwb-crafter/chassis/chassis.glb',
+  '/models/van-models/mwb-crafter/wheels/standard.glb',
+];
+
+essentialModels.forEach(path => {
+  useGLTF.preload(path);
+}); 

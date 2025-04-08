@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase Connection Test</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .success {
+      background-color: #e6ffed;
+      border: 1px solid #34d058;
+    }
+    .error {
+      background-color: #ffeef0;
+      border: 1px solid #f97583;
+    }
+    button {
+      padding: 10px 15px;
+      background: #0070f3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Supabase Connection Test</h1>
+  
+  <form id="testForm">
+    <div>
+      <label for="supabaseUrl">Supabase URL:</label>
+      <input type="text" id="supabaseUrl" style="width: 100%; margin: 5px 0 15px;" value="">
+    </div>
+    
+    <div>
+      <label for="supabaseKey">Supabase Anon Key:</label>
+      <input type="text" id="supabaseKey" style="width: 100%; margin: 5px 0 15px;" value="">
+    </div>
+    
+    <button type="submit">Test Connection</button>
+  </form>
+  
+  <div id="output"></div>
+  
+  <script>
+    // Auto-populate from local storage if available
+    document.getElementById('supabaseUrl').value = localStorage.getItem('supabaseUrl') || '';
+    document.getElementById('supabaseKey').value = localStorage.getItem('supabaseKey') || '';
+    
+    document.getElementById('testForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const output = document.getElementById('output');
+      output.innerHTML = '<div>Testing connection...</div>';
+      
+      const supabaseUrl = document.getElementById('supabaseUrl').value;
+      const supabaseKey = document.getElementById('supabaseKey').value;
+      
+      // Save to local storage
+      localStorage.setItem('supabaseUrl', supabaseUrl);
+      localStorage.setItem('supabaseKey', supabaseKey);
+      
+      if (!supabaseUrl || !supabaseKey) {
+        output.innerHTML = '<div class="result error">Please provide both Supabase URL and Anon Key</div>';
+        return;
+      }
+      
+      try {
+        // Create Supabase client
+        const { createClient } = supabase;
+        const client = createClient(supabaseUrl, supabaseKey);
+        
+        // Test connections
+        output.innerHTML += '<div>1. Testing builds table count...</div>';
+        
+        const { count, error: countError } = await client
+          .from('builds')
+          .select('*', { count: 'exact', head: true });
+          
+        if (countError) {
+          output.innerHTML += `<div class="result error">Count error: ${JSON.stringify(countError, null, 2)}</div>`;
+        } else {
+          output.innerHTML += `<div class="result success">Success! Table 'builds' has ${count} rows</div>`;
+        }
+        
+        // Try to fetch one record
+        output.innerHTML += '<div>2. Fetching a sample build...</div>';
+        
+        const { data, error: fetchError } = await client
+          .from('builds')
+          .select('*')
+          .limit(1);
+          
+        if (fetchError) {
+          output.innerHTML += `<div class="result error">Fetch error: ${JSON.stringify(fetchError, null, 2)}</div>`;
+        } else if (!data || data.length === 0) {
+          output.innerHTML += `<div class="result success">No records found, but query succeeded</div>`;
+        } else {
+          output.innerHTML += `<div class="result success">Successfully fetched record: ${JSON.stringify(data[0], null, 2)}</div>`;
+        }
+        
+        // Try to insert a test record
+        output.innerHTML += '<div>3. Testing insert capability...</div>';
+        
+        const testBuild = {
+          title: 'Connection Test Build',
+          description: 'Created via test page',
+          author: 'Test Script',
+          author_color: '#FF0000',
+          selected_options: ['Test Option 1', 'Test Option 2'],
+          selected_chassis: 'test_chassis',
+          selected_option_ids: ['test_option_1', 'test_option_2'],
+          likes: 0
+        };
+        
+        const { data: insertData, error: insertError } = await client
+          .from('builds')
+          .insert(testBuild)
+          .select();
+          
+        if (insertError) {
+          output.innerHTML += `<div class="result error">Insert error: ${JSON.stringify(insertError, null, 2)}</div>`;
+        } else {
+          output.innerHTML += `<div class="result success">Successfully inserted test record</div>`;
+        }
+        
+      } catch (err) {
+        output.innerHTML += `<div class="result error">Exception: ${err.message}</div>`;
+        console.error('Test exception:', err);
+      }
+    });
+  </script>
+</body>
+</html> 
