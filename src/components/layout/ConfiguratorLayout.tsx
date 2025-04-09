@@ -826,19 +826,6 @@ const ConfiguratorLayout: React.FC = () => {
           >
             Community
           </button>
-          {/* Render tab - uncomment the ENABLE_RENDER_TAB flag at the top of this file to restore */}
-          {/* <button
-            onClick={() => setActiveTab('ai')}
-            className={`flex-1 py-2 px-3 text-center font-mono uppercase text-sm tracking-wide ${
-              activeTab === 'ai' 
-                ? 'text-amber-500 border-b-2 border-amber-500' 
-                : 'text-black'
-            }`}
-            aria-label="AI Render Tool tab"
-            tabIndex={0}
-          >
-            Render
-          </button> */}
           <button
             onClick={() => setActiveTab('summary')}
             className={`flex-1 py-2 px-3 text-center font-mono uppercase text-sm tracking-wide ${
@@ -1065,111 +1052,6 @@ const ConfiguratorLayout: React.FC = () => {
                 ORDER SUMMARY
               </h1>
               <PriceDisplay detailed />
-            </div>
-          )}
-
-          {activeTab === 'ai' && (
-            <div className="space-y-6">
-              {/* Screenshot Gallery */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm uppercase tracking-wide">Screenshots</h3>
-                  {screenshots.length > 0 && (
-                    <button
-                      onClick={handleClearScreenshots}
-                      className="text-sm text-black hover:text-amber-500"
-                    >
-                      Clear All
-                    </button>
-                  )}
-                </div>
-                
-                {screenshots.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    {screenshots.map((screenshot, index) => (
-                      <div key={index} className="relative group">
-                        <NextImage
-                          src={screenshot}
-                          alt={`Screenshot ${index + 1}`}
-                          className="w-full aspect-video object-cover rounded-lg"
-                          width={1200}
-                          height={630}
-                        />
-                        <button
-                          onClick={() => setScreenshots(prev => prev.filter((_, i) => i !== index))}
-                          className="absolute top-2 right-2 p-1 bg-white/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg">
-                    <p className="text-gray-500 text-sm">No screenshots yet</p>
-                    <p className="text-gray-400 text-xs mt-1">Capture your current view with the button at the bottom</p>
-                  </div>
-                )}
-              </div>
-              
-              {/* AI Render Controls */}
-              <div className="space-y-4">
-                <h3 className="text-sm uppercase tracking-wide">AI Render</h3>
-                
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Describe how you want to see your van..."
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    className="font-mono text-sm"
-                  />
-                  
-                  <details className="text-xs">
-                    <summary className="cursor-pointer font-mono font-medium mb-2">Additional Details (Optional)</summary>
-                    <Input
-                      placeholder="Additional artistic style or environment details..."
-                      value={additionalPrompt}
-                      onChange={(e) => setAdditionalPrompt(e.target.value)}
-                      className="font-mono text-sm mt-2"
-                    />
-                  </details>
-                  
-                  <Button
-                    onClick={handleGenerate}
-                    className="w-full font-mono uppercase tracking-wide bg-amber-400 hover:bg-amber-500 text-white"
-                    disabled={isGenerating || screenshots.length === 0}
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      'Generate AI Render'
-                    )}
-                  </Button>
-                  
-                  {error && (
-                    <p className="text-red-500 text-xs font-mono">{error}</p>
-                  )}
-                </div>
-                
-                {/* Render Result */}
-                {aiImage && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-medium">Result</h4>
-                    <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <NextImage
-                        src={aiImage}
-                        alt="AI rendered van"
-                        width={1200}
-                        height={630}
-                        className="w-full object-cover"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           )}
         </div>
