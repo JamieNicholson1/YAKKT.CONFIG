@@ -1,9 +1,8 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
-import { useFrame } from '@react-three/fiber';
 import { useSpring, animated } from '@react-spring/three';
-import { Vector3, Euler, Group, Mesh, MeshStandardMaterial } from 'three';
+import { Vector3, Euler, Group } from 'three';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -15,10 +14,9 @@ interface AnimatedModelProps {
   castShadow?: boolean;
   isNew?: boolean;
   lowPerformanceMode?: boolean;
+  onLoad?: (gltf: any) => void;
+  onError?: (error: Error) => void;
 }
-
-// Model cache outside of component to prevent reloading
-const modelCache = new Map();
 
 const getPosition = (pos: Vector3 | [number, number, number]): [number, number, number] => {
   if (Array.isArray(pos)) {
@@ -34,15 +32,17 @@ const getRotation = (rot: Euler | [number, number, number]): [number, number, nu
   return [rot.x, rot.y, rot.z];
 };
 
-export const AnimatedModel = ({ 
+export const AnimatedModel: React.FC<AnimatedModelProps> = ({ 
   modelPath, 
   position = [0, 0, 0], 
   rotation = [0, 0, 0], 
   scale = 1, 
   castShadow = true,
   isNew = false,
-  lowPerformanceMode = false
-}: AnimatedModelProps) => {
+  lowPerformanceMode = false,
+  onLoad,
+  onError
+}) => {
   const groupRef = useRef<Group>(null);
   
   // Use the cached model for better performance
@@ -91,8 +91,8 @@ export const AnimatedModel = ({
   useEffect(() => {
     if (!clonedScene || !modelPath.includes('bravo-snorkel')) return;
     
-    clonedScene.traverse((child: any) => {
-      if (child.isMesh) {
+    clonedScene.traverse((child: THREE.Object3D) => {
+      if (child instanceof THREE.Mesh) {
         const blackMaterial = new THREE.MeshStandardMaterial({
           color: 0x000000,
           roughness: 0.7,
@@ -202,12 +202,18 @@ export const AnimatedModel = ({
         // Skip shadow casting for small meshes on low performance devices
         child.castShadow = lowPerformanceMode ? 
           (castShadow && meshVolume > 0.1) : castShadow;
-          
-        // Enable receiving shadows on all meshes
-        child.receiveShadow = true;
       }
     });
   }, [clonedScene, castShadow, lowPerformanceMode]);
+
+  // Fix any types
+  const handleLoad = (gltf: any) => {
+    // ... existing code ...
+  };
+
+  const handleError = (error: Error) => {
+    // ... existing code ...
+  };
 
   if (!clonedScene) {
     return null;

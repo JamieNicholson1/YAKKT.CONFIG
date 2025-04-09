@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Loader2, Download, Share2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function RenderPage() {
   const [prompt, setPrompt] = useState('');
@@ -115,11 +116,15 @@ export default function RenderPage() {
         <Card className="p-4">
           <h2 className="text-xl font-semibold mb-4">Your Configuration</h2>
           {originalImage ? (
-            <img 
-              src={originalImage} 
-              alt="Van configuration" 
-              className="w-full h-auto rounded-lg"
-            />
+            <div className="relative aspect-video">
+              <Image 
+                src={originalImage} 
+                alt="Van configuration" 
+                fill
+                className="object-contain rounded-lg"
+                priority
+              />
+            </div>
           ) : (
             <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
               <p className="text-gray-500">No image available</p>
@@ -166,11 +171,15 @@ export default function RenderPage() {
 
               {aiImage && (
                 <div className="mt-4">
-                  <img 
-                    src={aiImage} 
-                    alt="AI generated render" 
-                    className="w-full h-auto rounded-lg"
-                  />
+                  <div className="relative aspect-video">
+                    <Image 
+                      src={aiImage} 
+                      alt="AI generated render" 
+                      fill
+                      className="object-contain rounded-lg"
+                      priority
+                    />
+                  </div>
                   <div className="mt-4 flex gap-2">
                     <Button 
                       variant="outline" 

@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     }
 
     // Call OpenAI's GPT-4 Vision API
-    const response = await openai.chat.completions.create({
+    await openai.chat.completions.create({
       model: "gpt-4-vision-preview",
       messages: [
         {

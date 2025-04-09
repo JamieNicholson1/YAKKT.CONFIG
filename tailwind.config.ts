@@ -9,8 +9,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        mono: ['var(--font-geist-mono)', 'monospace'],
-        sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-geist-mono)'],
+        sans: ['var(--font-geist-sans)'],
       },
       colors: {
         amber: {

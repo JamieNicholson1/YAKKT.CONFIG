@@ -3,10 +3,7 @@ import useConfiguratorStore from '@/store/configurator';
 import { VanOption } from '@/types/configurator';
 import { 
   ChevronDown, 
-  ChevronUp, 
-  Palette, 
   Square, 
-  Cog, 
   PackageOpen, 
   Package, 
   Truck, 
@@ -19,12 +16,6 @@ const CATEGORY_GROUPS = {
   base: ['chassis'],
   exterior: ['windows', 'wheels', 'exterior-accessories'],
   storage: ['roof-racks', 'roof-rack-accessories', 'rear-door-carriers', 'rear-door-accessories']
-};
-
-const GROUP_NAMES = {
-  base: 'Base Configuration',
-  exterior: 'Exterior Options',
-  storage: 'Storage & Accessories'
 };
 
 // Add keyframes for the pulsate animation

@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-// Import types only
-import type { SceneRef } from '@/components/3d/Scene';
+import Scene, { SceneRef } from '@/components/3d/Scene';
 import ConfiguratorControls from '@/components/ui/ConfiguratorControls';
 import PriceDisplay from '@/components/ui/PriceDisplay';
 import { ShoppingCart, Loader2, Camera, X, Check, ChevronUp, ChevronDown, Share2, Save, Users, Download, Link, Instagram, Mail } from 'lucide-react';
@@ -16,16 +14,11 @@ import BuildCard from '@/components/ui/BuildCard';
 import SavingsBanner from '@/components/ui/SavingsBanner';
 import useCommunityBuilds from '@/hooks/useCommunityBuilds';
 import { toast } from '@/components/ui/use-toast';
-
-// Dynamically import Scene component with ssr disabled
-const Scene = dynamic(() => import('@/components/3d/Scene'), { 
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-      <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-    </div>
-  )
-});
+import { generateShareCard } from '@/lib/share-card';
+import { useRouter } from 'next/navigation';
+import { useSupabase } from '@/lib/supabase';
+import { useConfetti } from '@/lib/use-confetti';
+import { useAnnouncement } from '@/lib/use-announcement';
 
 const ConfiguratorLayout: React.FC = () => {
   // Feature flags for easy toggling - uncomment to enable
@@ -65,6 +58,11 @@ const ConfiguratorLayout: React.FC = () => {
     refreshBuilds
   } = useCommunityBuilds();
 
+  const router = useRouter();
+  const { supabase } = useSupabase();
+  const { triggerConfetti } = useConfetti();
+  const { showAnnouncement: showAnnouncementToast } = useAnnouncement();
+
   // Calculate savings based on total price
   const calculateSavings = (total: number): { percentage: number; amount: number } => {
     if (total < 1750) return { percentage: 0, amount: 0 };
@@ -92,6 +90,14 @@ const ConfiguratorLayout: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [savings.percentage]);
+
+  // Reset sharing state when component unmounts
+  useEffect(() => {
+    return () => {
+      setIsSharing(false);
+      setShowShareModal(false);
+    };
+  }, []);
 
   // Handle checkout button click
   const handleCheckoutClick = () => {
@@ -227,289 +233,6 @@ const ConfiguratorLayout: React.FC = () => {
   };
 
   // Generate share card with screenshot and configuration details
-  const generateShareCard = async (
-    buildName: string,
-    authorName: string,
-    chassisName: string,
-    optionsList: string[],
-    screenshotUrl: string | null
-  ): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      try {
-        // Create a canvas element
-        const canvas = document.createElement('canvas');
-        const width = 1200;
-        const height = 630;
-        canvas.width = width;
-        canvas.height = height;
-        
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject('Failed to create canvas context');
-          return;
-        }
-        
-        // Helper function to complete drawing and resolve with image data
-        const finalizeCard = () => {
-          try {
-            // We need to catch any potential security errors here
-            const dataUrl = canvas.toDataURL('image/png');
-            resolve(dataUrl);
-          } catch (err) {
-            console.error('Error converting canvas to data URL:', err);
-            // Create a simple fallback card if canvas operations fail
-            createFallbackCard(ctx);
-          }
-        };
-        
-        // Create a simple fallback card with just text content if all else fails
-        const createFallbackCard = (context: CanvasRenderingContext2D) => {
-          // Clear canvas and start over with simple text
-          context.fillStyle = '#FFFFFF';
-          context.fillRect(0, 0, width, height);
-          
-          context.fillStyle = '#000000';
-          context.font = 'bold 32px "Space Mono", monospace';
-          context.textAlign = 'center';
-          context.fillText('YAKKT CONFIGURATOR', width/2, 100);
-          
-          context.fillStyle = '#F59E0B';
-          context.font = 'bold 48px "Space Mono", monospace';
-          context.fillText(buildName || 'My Custom Van', width/2, 180);
-          
-          context.fillStyle = '#000000';
-          context.font = '24px "Space Mono", monospace';
-          context.fillText(`Chassis: ${chassisName}`, width/2, 250);
-          
-          context.fillStyle = '#4B5563';
-          context.font = '20px "Space Mono", monospace';
-          context.textAlign = 'center';
-          
-          // List options in center of card
-          let yPos = 320;
-          const displayOptions = optionsList.length > 6 ? 
-            optionsList.slice(0, 5).concat([`+ ${optionsList.length - 5} more`]) : 
-            optionsList;
-            
-          displayOptions.forEach((option, i) => {
-            context.fillText(`• ${option}`, width/2, yPos);
-            yPos += 40;
-          });
-          
-          try {
-            const dataUrl = canvas.toDataURL('image/png');
-            resolve(dataUrl);
-          } catch (finalErr) {
-            // If even the fallback fails, return a static placeholder
-            reject('Failed to generate share image');
-          }
-        };
-        
-        // Load and draw the screenshot if available
-        if (screenshotUrl) {
-          const screenshot = new Image();
-          
-          // Set crossOrigin to anonymous to prevent tainted canvas
-          screenshot.crossOrigin = 'anonymous';
-          
-          screenshot.onload = () => {
-            try {
-              // Draw a clean, modern card layout
-              drawCleanCardLayout(ctx, screenshot);
-              
-              // Finalize and get data URL
-              finalizeCard();
-            } catch (canvasErr) {
-              console.error('Error drawing screenshot on canvas:', canvasErr);
-              createFallbackCard(ctx);
-            }
-          };
-          
-          screenshot.onerror = () => {
-            console.error('Failed to load screenshot');
-            // If screenshot fails to load, draw a clean layout without screenshot
-            drawCleanCardLayout(ctx, null);
-            finalizeCard();
-          };
-          
-          // Handle security errors
-          try {
-            screenshot.src = screenshotUrl;
-          } catch (srcErr) {
-            console.error('Error setting screenshot source:', srcErr);
-            drawCleanCardLayout(ctx, null);
-            finalizeCard();
-          }
-        } else {
-          // No screenshot, just draw clean layout
-          drawCleanCardLayout(ctx, null);
-          finalizeCard();
-        }
-        
-        // Function to draw a clean, modern card layout
-        function drawCleanCardLayout(context: CanvasRenderingContext2D, image: HTMLImageElement | null) {
-          // Premium white background
-          context.fillStyle = '#FFFFFF';
-          context.fillRect(0, 0, width, height);
-          
-          // Draw the image section with crisp lines and proper sizing
-          const imageSection = { 
-            x: 40, 
-            y: 40,
-            width: width * 0.5 - 60, 
-            height: height - 80
-          };
-          
-          // Draw a subtle background
-          context.fillStyle = '#F9FAFB';
-          context.fillRect(
-            imageSection.x, 
-            imageSection.y, 
-            imageSection.width, 
-            imageSection.height
-          );
-          
-          if (image) {
-            // Draw the screenshot, maintaining aspect ratio
-            const imgRatio = image.width / image.height;
-            let renderWidth = imageSection.width - 40; // Add padding
-            let renderHeight = renderWidth / imgRatio;
-            
-            // Adjust if needed to fit in the box
-            if (renderHeight > imageSection.height - 40) {
-              renderHeight = imageSection.height - 40;
-              renderWidth = renderHeight * imgRatio;
-            }
-            
-            // Center the image in the allocated space
-            const xOffset = imageSection.x + (imageSection.width - renderWidth) / 2;
-            const yOffset = imageSection.y + (imageSection.height - renderHeight) / 2;
-            
-            context.drawImage(image, xOffset, yOffset, renderWidth, renderHeight);
-          } else {
-            // Minimal placeholder
-            context.fillStyle = '#E5E7EB';
-            context.fillRect(
-              imageSection.x + 40, 
-              imageSection.y + imageSection.height/2 - 40, 
-              imageSection.width - 80, 
-              80
-            );
-            
-            context.fillStyle = '#9CA3AF';
-            context.font = '16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
-            context.textAlign = 'center';
-            context.fillText(
-              'Van Preview', 
-              imageSection.x + imageSection.width / 2, 
-              imageSection.y + imageSection.height / 2 + 6
-            );
-          }
-          
-          // Text section - Apple/Tesla style with lots of whitespace and minimal design
-          const textX = width * 0.5 + 20;
-          let currentY = 60;
-          
-          // Use system fonts that will render properly on canvas
-          const titleFont = 'bold 46px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
-          const headerFont = 'bold 26px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
-          const normalFont = '20px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
-          const smallFont = '16px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
-          
-          // YAKKT text
-          context.font = headerFont;
-          context.fillStyle = '#111111';
-          context.textAlign = 'left';
-          context.fillText('YAKKT', textX, currentY);
-          
-          // Configurator with lighter weight
-          context.font = '24px system-ui, -apple-system, BlinkMacSystemFont, sans-serif';
-          context.fillStyle = '#4B5563';
-          context.fillText('CONFIGURATOR', textX + 90, currentY);
-          currentY += 80;
-          
-          // Build name - large, bold, and prominent
-          context.font = titleFont;
-          context.fillStyle = '#111111';
-          context.fillText(buildName || 'My Custom Van', textX, currentY);
-          currentY += 30;
-          
-          // Draw author if available
-          if (authorName) {
-            context.font = normalFont;
-            context.fillStyle = '#6B7280';
-            context.fillText(`Designed by ${authorName}`, textX, currentY);
-            currentY += 60;
-          } else {
-            currentY += 30;
-          }
-          
-          // Draw an elegant thin divider line
-          context.fillStyle = '#E5E7EB';
-          context.fillRect(textX, currentY, width * 0.43, 1);
-          currentY += 40;
-          
-          // Chassis with minimal styling
-          context.font = headerFont;
-          context.fillStyle = '#111111';
-          context.fillText('Chassis', textX, currentY);
-          currentY += 30;
-          
-          context.font = normalFont;
-          context.fillStyle = '#374151';
-          context.fillText(chassisName, textX, currentY);
-          currentY += 50;
-          
-          // Options header
-          context.font = headerFont;
-          context.fillStyle = '#111111';
-          context.fillText('Selected Options', textX, currentY);
-          currentY += 30;
-          
-          // Draw options list with clean bullets
-          const displayOptions = optionsList.length > 6 ? 
-            [...optionsList.slice(0, 5), `+ ${optionsList.length - 5} more options`] : 
-            [...optionsList];
-          
-          context.font = normalFont;
-          displayOptions.forEach((option, index) => {
-            // Clean dot bullet point
-            context.fillStyle = '#D1D5DB';
-            context.beginPath();
-            context.arc(textX + 6, currentY - 7, 4, 0, Math.PI * 2);
-            context.fill();
-            
-            // Option text
-            const color = index === displayOptions.length - 1 && optionsList.length > 6 ? 
-              '#F59E0B' : '#374151';
-            
-            context.fillStyle = color;
-            context.fillText(option, textX + 20, currentY);
-            currentY += 36;
-          });
-          
-          // Footer text with minimal styling
-          const footerY = height - 40;
-          context.font = smallFont;
-          context.fillStyle = '#9CA3AF';
-          context.fillText('yakkt.com', textX, footerY);
-          
-          // Draw a subtle premium accent
-          context.fillStyle = '#F59E0B';
-          context.beginPath();
-          context.moveTo(width - 40, 40);
-          context.lineTo(width - 20, 40);
-          context.lineTo(width - 20, 60);
-          context.fill();
-        }
-      } catch (error) {
-        console.error('Error generating share card:', error);
-        reject('Failed to generate share card');
-      }
-    });
-  };
-
-  // Handle share build
   const handleShareBuild = async () => {
     if (!chassisId) {
       toast({
@@ -520,6 +243,9 @@ const ConfiguratorLayout: React.FC = () => {
       return;
     }
 
+    // Prevent multiple share attempts
+    if (isSharing || showShareModal) return;
+    
     setIsSharing(true);
 
     try {
@@ -529,10 +255,12 @@ const ConfiguratorLayout: React.FC = () => {
 
       // Find selected chassis and options
       const selectedChassis = chassis.find((c) => c.id === chassisId);
-      const selectedOptionNames = Array.from(selectedOptionIds).map(id => {
-        const option = options.find((opt) => opt.id === id);
-        return option ? option.name : '';
-      }).filter(Boolean);
+      const selectedOptionNames = Array.isArray(selectedOptionIds)
+        ? Array.from(selectedOptionIds).map(id => {
+            const option = options.find((opt) => opt.id === id);
+            return option ? option.name : '';
+          }).filter(Boolean)
+        : [];
 
       // Generate a shareable URL with the current configuration
       const currentConfig = {
@@ -550,17 +278,6 @@ const ConfiguratorLayout: React.FC = () => {
       
       // Set share URL to state (do this early in case image fails)
       setShareUrl(shareUrl);
-      
-      try {
-        // Try to copy to clipboard first
-        await navigator.clipboard.writeText(shareUrl).catch(err => {
-          console.warn('Clipboard write failed:', err);
-          // Continue without clipboard - we'll still show the URL
-        });
-      } catch (clipboardErr) {
-        console.warn('Clipboard API not available:', clipboardErr);
-        // Continue without clipboard
-      }
       
       // Capture a screenshot of the current view
       let screenshotUrl = null;
@@ -631,10 +348,12 @@ const ConfiguratorLayout: React.FC = () => {
         const store = useConfiguratorStore.getState();
         const { chassis, options, selectedOptionIds } = store;
         const selectedChassis = chassis.find((c) => c.id === chassisId);
-        const selectedOptionNames = Array.from(selectedOptionIds).map(id => {
-          const option = options.find((opt) => opt.id === id);
-          return option ? option.name : '';
-        }).filter(Boolean);
+        const selectedOptionNames = Array.isArray(selectedOptionIds)
+          ? Array.from(selectedOptionIds).map(id => {
+              const option = options.find((opt) => opt.id === id);
+              return option ? option.name : '';
+            }).filter(Boolean)
+          : [];
         
         // Try to generate a card for download
         generateShareCard(
@@ -797,6 +516,15 @@ const ConfiguratorLayout: React.FC = () => {
     setEmail('');
   };
 
+  // Add explicit types
+  const handleImageLoad = (imageUrl: string) => {
+    // ... existing code ...
+  };
+
+  const handleError = (err: Error) => {
+    // ... existing code ...
+  };
+
   return (
     <div className="flex flex-col lg:flex-row h-screen bg-white max-w-screen overflow-x-hidden">
       {/* 3D View */}
@@ -946,7 +674,7 @@ const ConfiguratorLayout: React.FC = () => {
                     <Button
                       variant="default"
                       onClick={handleShareBuild}
-                      disabled={isSharing}
+                      disabled={isSharing || showShareModal}
                       className="flex-1 h-7 font-mono text-xs bg-black hover:bg-amber-500 text-white"
                     >
                         {isSharing ? (
@@ -1029,7 +757,7 @@ const ConfiguratorLayout: React.FC = () => {
                     <Button
                       variant="default"
                       onClick={handleShareBuild}
-                      disabled={isSharing}
+                      disabled={isSharing || showShareModal}
                       className="flex-1 h-7 font-mono text-xs bg-black hover:bg-amber-500 text-white"
                     >
                         {isSharing ? (
@@ -1244,7 +972,11 @@ const ConfiguratorLayout: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Share Your Build</h2>
                 <button 
-                  onClick={() => setShowShareModal(false)}
+                  onClick={() => {
+                    setShowShareModal(false);
+                    // Reset sharing state when modal is closed
+                    setIsSharing(false);
+                  }}
                   className="text-gray-500 hover:text-black transition-colors rounded-full p-1 hover:bg-gray-100"
                 >
                   <X className="w-6 h-6" />

@@ -1,13 +1,13 @@
 import React from 'react';
 import useConfiguratorStore from '@/store/configurator';
-import { Truck, CreditCard, Clock, Sparkles } from 'lucide-react';
+import { Truck, Sparkles, Clock } from 'lucide-react';
 
 interface PriceDisplayProps {
   detailed?: boolean;
 }
 
 const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
-  const { priceData, options, selectedOptionIds, chassisId, chassis } = useConfiguratorStore();
+  const { priceData, options } = useConfiguratorStore();
   const { totalPrice, addOnPrices } = priceData;
 
   // Helper function to get option details from ID
@@ -32,27 +32,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
 
   // Get savings amount and percentage
   const savings = calculateSavings(totalPrice);
-  const savingsAmount = savings.amount;
   const savingsPercentage = savings.percentage;
-
-  // Get option thumbnail URL based on the modelUrl
-  const getOptionThumbnail = (id: string) => {
-    const option = getOption(id);
-    if (!option) return '';
-    
-    // Extract the model path and convert to thumbnail path
-    const modelPath = Array.isArray(option.modelUrl) ? option.modelUrl[0] : option.modelUrl;
-    // Format: /models/van-models/mwb-crafter/category/option.glb
-    // to: /thumbnails/category/option.jpg
-    
-    const parts = modelPath.split('/');
-    if (parts.length < 3) return ''; // Invalid path
-    
-    const category = option.category;
-    const fileName = parts[parts.length - 1].replace('.glb', '');
-    
-    return `/thumbnails/${category}/${fileName}.jpg`;
-  };
 
   // Get option description
   const getOptionDescription = (id: string) => {
@@ -140,7 +120,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
                 className="flex justify-between items-center w-full font-semibold text-sm text-gray-900 uppercase tracking-wide"
                 aria-expanded={expandedItems}
               >
-                <span>What's Included ({Object.entries(addOnPrices).length} items)</span>
+                <span>What&apos;s Included ({Object.entries(addOnPrices).length} items)</span>
                 <div className={`transition-transform duration-200 ${expandedItems ? 'rotate-180' : ''}`}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="m6 9 6 6 6-6"/>
@@ -154,7 +134,6 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
                 {Object.entries(addOnPrices).map(([id, price]) => {
                   const option = getOption(id);
                   const optionName = option ? option.name : id;
-                  const thumbnailUrl = getOptionThumbnail(id);
                   const description = getOptionDescription(id);
                   
                   // Track the expanded state of this specific item
@@ -235,7 +214,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden font-mono">
       <div className="bg-gray-50 p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 tracking-tight">What's Included ({Object.entries(addOnPrices).length} Items)</h2>
+        <h2 className="text-lg font-semibold text-gray-900 tracking-tight">What&apos;s Included ({Object.entries(addOnPrices).length} Items)</h2>
       </div>
       
       <div className="p-4 space-y-4">
@@ -249,19 +228,8 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
             ))}
           </div>
         ) : (
-          <div className="text-gray-500 text-center py-2">
-            No options selected yet
-          </div>
+          <div className="text-sm text-gray-500">No items selected</div>
         )}
-        
-        <div className="text-xs text-gray-500 flex items-center">
-          <Truck className="w-3 h-3 mr-1" />
-          Estimated delivery: {deliveryTime.min}-{deliveryTime.max} working days
-        </div>
-        
-        <div className="text-xs text-gray-600 mt-2">
-          Pay in 3 interest-free payments of <span className="font-medium">£{(totalPrice / 3).toFixed(2)}</span> with <span className="font-semibold text-[#003087]">PayPal</span>.
-        </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Heart, Download } from 'lucide-react';
 import { Button } from './button';
 
@@ -6,7 +6,7 @@ interface BuildCardProps {
   title: string;
   author: string;
   likes: number;
-  selectedOptions: string[];
+  selectedOptions: string[] | null | undefined;
   onLike: () => void;
   onLoad: () => void;
   authorColor?: string;
@@ -16,7 +16,7 @@ const BuildCard: React.FC<BuildCardProps> = ({
   title,
   author,
   likes,
-  selectedOptions,
+  selectedOptions = [],
   onLike,
   onLoad,
   authorColor = '#000000'
@@ -34,14 +34,18 @@ const BuildCard: React.FC<BuildCardProps> = ({
         </div>
 
         <div className="flex flex-wrap gap-1.5">
-          {selectedOptions.map((option, index) => (
-            <span
-              key={index}
-              className="bg-gray-100 px-2 py-0.5 rounded-md text-xs font-mono text-black"
-            >
-              {option}
-            </span>
-          ))}
+          {selectedOptions && selectedOptions.length > 0 ? (
+            selectedOptions.map((option, index) => (
+              <span
+                key={`option-${index}-${option}`}
+                className="bg-gray-100 px-2 py-0.5 rounded-md text-xs font-mono text-black"
+              >
+                {option}
+              </span>
+            ))
+          ) : (
+            <span className="text-xs font-mono text-gray-400">No options selected</span>
+          )}
         </div>
 
         <div className="flex items-center justify-between pt-1">

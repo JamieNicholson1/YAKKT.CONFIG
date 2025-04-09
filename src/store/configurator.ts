@@ -13,6 +13,7 @@ const calculatePrice = (state: ConfigSelection, options: VanOption[], chassisPri
 };
 
 const useConfiguratorStore = create<ConfiguratorState>((set, get) => ({
+  // Base state
   chassisId: null,
   selectedOptionIds: new Set(),
   chassis: [],
@@ -24,6 +25,17 @@ const useConfiguratorStore = create<ConfiguratorState>((set, get) => ({
   },
   isLoading: false,
   error: null,
+
+  // Additional required properties
+  vehicleModel: null,
+  windowsFlares: [],
+  wheels: null,
+  exteriorAccessories: [],
+  rearDoorCarriers: [],
+  rearDoorAccessories: [],
+  roofRack: null,
+  roofRackAccessories: [],
+  totalPrice: 0,
 
   // Actions
   setChassis: (chassisId: string) => {
@@ -94,6 +106,15 @@ const useConfiguratorStore = create<ConfiguratorState>((set, get) => ({
         chassisPrice: 0,
         addOnPrices: {},
       },
+      vehicleModel: null,
+      windowsFlares: [],
+      wheels: null,
+      exteriorAccessories: [],
+      rearDoorCarriers: [],
+      rearDoorAccessories: [],
+      roofRack: null,
+      roofRackAccessories: [],
+      totalPrice: 0,
     });
   },
 

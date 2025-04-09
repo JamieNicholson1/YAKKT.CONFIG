@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Yakkt Campervan Configurator
- * Description: Custom plugin to embed the Next.js campervan configurator, create WooCommerce orders, and integrate with Supabase.
- * Version: 1.1
+ * Description: Custom plugin to embed the Next.js campervan configurator and create WooCommerce orders.
+ * Version: 1.0
  * Author: Yakkt
  * Text Domain: yakkt-campervan-configurator
  */
@@ -67,48 +67,6 @@ function yakkt_register_rest_routes() {
         'methods' => 'POST',
         'callback' => 'yakkt_create_campervan_order',
         'permission_callback' => 'yakkt_verify_order_request',
-    ));
-
-    // Add new endpoint to fetch community builds from Supabase
-    register_rest_route('yakkt/v1', '/community-builds', array(
-        'methods' => 'GET',
-        'callback' => 'yakkt_get_community_builds',
-        'permission_callback' => '__return_true',
-    ));
-    
-    // Add endpoint to get a specific build
-    register_rest_route('yakkt/v1', '/build/(?P<id>[a-zA-Z0-9-]+)', array(
-        'methods' => 'GET',
-        'callback' => 'yakkt_get_build_by_id',
-        'permission_callback' => '__return_true',
-        'args' => array(
-            'id' => array(
-                'validate_callback' => function($param) {
-                    return is_string($param) && !empty($param);
-                }
-            )
-        ),
-    ));
-    
-    // Add endpoint to save a new build
-    register_rest_route('yakkt/v1', '/save-build', array(
-        'methods' => 'POST',
-        'callback' => 'yakkt_save_build',
-        'permission_callback' => 'yakkt_verify_order_request',
-    ));
-    
-    // Add endpoint to like a build
-    register_rest_route('yakkt/v1', '/like-build/(?P<id>[a-zA-Z0-9-]+)', array(
-        'methods' => 'POST',
-        'callback' => 'yakkt_like_build',
-        'permission_callback' => '__return_true',
-        'args' => array(
-            'id' => array(
-                'validate_callback' => function($param) {
-                    return is_string($param) && !empty($param);
-                }
-            )
-        ),
     ));
 }
 add_action('rest_api_init', 'yakkt_register_rest_routes');
@@ -284,183 +242,6 @@ function yakkt_create_campervan_order($request) {
 }
 
 /**
- * Make a request to Supabase API
- */
-function yakkt_supabase_request($endpoint, $method = 'GET', $body = null) {
-    $supabase_url = get_option('yakkt_supabase_url', '');
-    $supabase_key = get_option('yakkt_supabase_anon_key', '');
-    
-    if (empty($supabase_url) || empty($supabase_key)) {
-        return new WP_Error('missing_credentials', 'Supabase credentials not configured');
-    }
-    
-    $url = $supabase_url . $endpoint;
-    
-    $args = array(
-        'method' => $method,
-        'headers' => array(
-            'apikey' => $supabase_key,
-            'Authorization' => 'Bearer ' . $supabase_key,
-            'Content-Type' => 'application/json',
-            'Prefer' => 'return=representation'
-        ),
-        'timeout' => 15,
-    );
-    
-    if ($body && ($method === 'POST' || $method === 'PATCH')) {
-        $args['body'] = json_encode($body);
-    }
-    
-    $response = wp_remote_request($url, $args);
-    
-    if (is_wp_error($response)) {
-        return $response;
-    }
-    
-    $status_code = wp_remote_retrieve_response_code($response);
-    $response_body = wp_remote_retrieve_body($response);
-    
-    if ($status_code < 200 || $status_code >= 300) {
-        return new WP_Error(
-            'supabase_error',
-            'Error from Supabase: ' . $response_body,
-            array('status' => $status_code)
-        );
-    }
-    
-    $data = json_decode($response_body, true);
-    
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        return new WP_Error(
-            'json_parse_error',
-            'Failed to parse JSON response from Supabase',
-            array('status' => 500)
-        );
-    }
-    
-    return $data;
-}
-
-/**
- * Get community builds from Supabase
- */
-function yakkt_get_community_builds($request) {
-    $response = yakkt_supabase_request('/rest/v1/builds?select=*&order=created_at.desc&limit=10');
-    
-    if (is_wp_error($response)) {
-        return $response;
-    }
-    
-    return array(
-        'success' => true,
-        'builds' => $response
-    );
-}
-
-/**
- * Get a specific build by ID from Supabase
- */
-function yakkt_get_build_by_id($request) {
-    $build_id = $request['id'];
-    
-    $response = yakkt_supabase_request('/rest/v1/builds?id=eq.' . urlencode($build_id) . '&limit=1');
-    
-    if (is_wp_error($response)) {
-        return $response;
-    }
-    
-    if (empty($response)) {
-        return new WP_Error(
-            'build_not_found',
-            'Build not found',
-            array('status' => 404)
-        );
-    }
-    
-    return array(
-        'success' => true,
-        'build' => $response[0]
-    );
-}
-
-/**
- * Save a new build to Supabase
- */
-function yakkt_save_build($request) {
-    $body = $request->get_json_params();
-    
-    // Basic validation
-    if (empty($body['title']) || empty($body['selected_chassis'])) {
-        return new WP_Error(
-            'missing_data',
-            'Missing required build data',
-            array('status' => 400)
-        );
-    }
-    
-    // Ensure required fields
-    $build_data = array(
-        'title' => sanitize_text_field($body['title']),
-        'description' => sanitize_text_field($body['description'] ?? ''),
-        'author' => sanitize_text_field($body['author'] ?? 'Anonymous'),
-        'author_color' => sanitize_text_field($body['author_color'] ?? '#000000'),
-        'likes' => 0,
-        'selected_chassis' => sanitize_text_field($body['selected_chassis']),
-        'selected_options' => (array)($body['selected_options'] ?? []),
-        'selected_option_ids' => (array)($body['selected_option_ids'] ?? []),
-        'email' => sanitize_email($body['email'] ?? '')
-    );
-    
-    $response = yakkt_supabase_request('/rest/v1/builds', 'POST', $build_data);
-    
-    if (is_wp_error($response)) {
-        return $response;
-    }
-    
-    return array(
-        'success' => true,
-        'build' => $response[0]
-    );
-}
-
-/**
- * Like a build in Supabase
- */
-function yakkt_like_build($request) {
-    $build_id = $request['id'];
-    
-    // First get the current build to retrieve the likes count
-    $get_response = yakkt_supabase_request('/rest/v1/builds?id=eq.' . urlencode($build_id) . '&select=likes');
-    
-    if (is_wp_error($get_response) || empty($get_response)) {
-        return new WP_Error(
-            'build_not_found',
-            'Build not found',
-            array('status' => 404)
-        );
-    }
-    
-    $current_likes = intval($get_response[0]['likes'] ?? 0);
-    $new_likes = $current_likes + 1;
-    
-    // Update the likes
-    $update_response = yakkt_supabase_request(
-        '/rest/v1/builds?id=eq.' . urlencode($build_id),
-        'PATCH',
-        array('likes' => $new_likes)
-    );
-    
-    if (is_wp_error($update_response)) {
-        return $update_response;
-    }
-    
-    return array(
-        'success' => true,
-        'likes' => $new_likes
-    );
-}
-
-/**
  * Add settings page for the plugin
  */
 function yakkt_add_admin_menu() {
@@ -481,8 +262,6 @@ function yakkt_register_settings() {
     register_setting('yakkt_configurator_settings', 'yakkt_configurator_url');
     register_setting('yakkt_configurator_settings', 'yakkt_product_id');
     register_setting('yakkt_configurator_settings', 'yakkt_api_key');
-    register_setting('yakkt_configurator_settings', 'yakkt_supabase_url');
-    register_setting('yakkt_configurator_settings', 'yakkt_supabase_anon_key');
 }
 add_action('admin_init', 'yakkt_register_settings');
 
@@ -530,28 +309,6 @@ function yakkt_settings_page() {
                                value="<?php echo esc_attr(get_option('yakkt_api_key', '')); ?>" 
                                class="regular-text">
                         <p class="description">API key for securing the REST endpoint (leave empty for development)</p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">
-                        <label for="yakkt_supabase_url">Supabase URL</label>
-                    </th>
-                    <td>
-                        <input type="url" id="yakkt_supabase_url" name="yakkt_supabase_url" 
-                               value="<?php echo esc_attr(get_option('yakkt_supabase_url', '')); ?>" 
-                               class="regular-text">
-                        <p class="description">Your Supabase project URL (e.g., https://yourproject.supabase.co)</p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row">
-                        <label for="yakkt_supabase_anon_key">Supabase Anonymous Key</label>
-                    </th>
-                    <td>
-                        <input type="text" id="yakkt_supabase_anon_key" name="yakkt_supabase_anon_key" 
-                               value="<?php echo esc_attr(get_option('yakkt_supabase_anon_key', '')); ?>" 
-                               class="regular-text">
-                        <p class="description">Your Supabase anonymous/public API key</p>
                     </td>
                 </tr>
             </table>

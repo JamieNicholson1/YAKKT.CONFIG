@@ -1,14 +1,9 @@
 #!/bin/bash
 
-# Set version
-VERSION="1.1"
+# Create a zip file of the WordPress plugin
+echo "Packaging Yakkt Campervan Configurator WordPress plugin..."
+cd "$(dirname "$0")"
+zip -r yakkt-campervan-configurator.zip yakkt-campervan-configurator
 
-# Create a zip file
-cd $(dirname "$0")
-rm -f yakkt-campervan-configurator-$VERSION.zip
-rm -f yakkt-campervan-configurator.zip
-zip -r yakkt-campervan-configurator-$VERSION.zip yakkt-campervan-configurator -x "*.DS_Store" -x "*.git*"
-cp yakkt-campervan-configurator-$VERSION.zip yakkt-campervan-configurator.zip
-
-echo "Created yakkt-campervan-configurator-$VERSION.zip"
+echo "Plugin packaged successfully: yakkt-campervan-configurator.zip"
 echo "Upload this file to your WordPress site via the admin panel." 
