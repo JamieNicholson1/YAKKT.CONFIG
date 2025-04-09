@@ -1,3 +1,4 @@
+/// <reference types="@react-three/fiber" />
 'use client';
 
 import { Canvas, useThree } from '@react-three/fiber';
@@ -6,7 +7,6 @@ import { Suspense, useState, useEffect, forwardRef, useImperativeHandle, useCall
 import useConfiguratorStore from '@/store/configurator';
 import { AnimatedModel } from '@/components/3d/AnimatedModel';
 import { LoadingIndicator } from '@/components/3d/LoadingIndicator';
-import { VanOption } from '@/types/configurator';
 
 // Screenshot capture component
 const ScreenshotHandler = ({ onReady }: { onReady: (capture: () => string) => void }) => {

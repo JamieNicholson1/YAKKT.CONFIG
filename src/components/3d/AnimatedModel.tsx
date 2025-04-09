@@ -1,10 +1,11 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useMemo } from 'react';
 import { useSpring, animated } from '@react-spring/three';
 import { Vector3, Euler, Group } from 'three';
 import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
+import { useFrame } from '@react-three/fiber';
 
 interface AnimatedModelProps {
   modelPath: string;
@@ -12,10 +13,11 @@ interface AnimatedModelProps {
   rotation?: Euler | [number, number, number];
   scale?: number | [number, number, number];
   castShadow?: boolean;
+  receiveShadow?: boolean;
+  springConfig?: object;
+  initialAnimation?: boolean;
   isNew?: boolean;
   lowPerformanceMode?: boolean;
-  onLoad?: (gltf: any) => void;
-  onError?: (error: Error) => void;
 }
 
 const getPosition = (pos: Vector3 | [number, number, number]): [number, number, number] => {
@@ -32,201 +34,115 @@ const getRotation = (rot: Euler | [number, number, number]): [number, number, nu
   return [rot.x, rot.y, rot.z];
 };
 
-export const AnimatedModel: React.FC<AnimatedModelProps> = ({ 
-  modelPath, 
-  position = [0, 0, 0], 
-  rotation = [0, 0, 0], 
-  scale = 1, 
+const getScale = (s: number | [number, number, number]): [number, number, number] => {
+  if (typeof s === 'number') {
+    return [s, s, s];
+  }
+  return s;
+};
+
+export const AnimatedModel: React.FC<AnimatedModelProps> = ({
+  modelPath,
+  position = [0, 0, 0],
+  rotation = [0, 0, 0],
+  scale = 1,
   castShadow = true,
+  receiveShadow = true,
+  springConfig = { mass: 1, tension: 170, friction: 26 },
+  initialAnimation = true,
   isNew = false,
   lowPerformanceMode = false,
-  onLoad,
-  onError
 }) => {
   const groupRef = useRef<Group>(null);
-  
-  // Use the cached model for better performance
   const { scene } = useGLTF(modelPath);
-  const clonedScene = scene.clone();
-  
-  // Convert position and rotation to arrays
-  const posArray = getPosition(position);
-  const rotArray = getRotation(rotation);
-  
-  // Use simpler animation configuration for low performance mode
-  const springConfig = {
-    mass: 1,
-    tension: lowPerformanceMode ? 200 : 320,
-    friction: lowPerformanceMode ? 20 : 28,
-  };
-  
-  // Reduce animation complexity on low performance devices
-  const dropHeight = lowPerformanceMode ? 0.1 : 0.25;
-  const rotationAmount = lowPerformanceMode ? Math.PI * 0.1 : Math.PI * 0.25;
-  const initialScale = lowPerformanceMode ? 0.95 : 0.9;
-  
-  // Animation springs with conditional intensity based on device capability
-  const { springPosition, springScale, springRotation } = useSpring({
-    springPosition: isNew ? [posArray[0], posArray[1] + dropHeight, posArray[2]] : posArray,
-    springScale: isNew ? initialScale : (typeof scale === 'number' ? scale : scale[0]),
-    springRotation: isNew ? [rotArray[0], rotArray[1] + rotationAmount, rotArray[2]] : rotArray,
+
+  // Memoize the cloned scene
+  const clonedScene = useMemo(() => scene.clone(), [scene]);
+
+  // State for initial animation effect
+  const [animateIn, setAnimateIn] = useState(initialAnimation);
+
+  // Prepare arrays for spring animations
+  const posArray = useMemo(() => getPosition(position), [position]);
+  const rotArray = useMemo(() => getRotation(rotation), [rotation]);
+  const scaleArray = useMemo(() => getScale(scale), [scale]);
+
+  // Calculate initial animation parameters
+  const dropHeight = 1; // How far up it starts
+  const rotationAmount = Math.PI / 4; // How much it rotates
+  const initialScale = 0.5; // Starting scale
+
+  // Define spring animations
+  const { springPosition, springRotation, springScale } = useSpring({
     from: {
-      springPosition: isNew ? [posArray[0], posArray[1] + dropHeight, posArray[2]] : posArray,
-      springScale: isNew ? initialScale : (typeof scale === 'number' ? scale : scale[0]),
-      springRotation: isNew ? [rotArray[0], rotArray[1], rotArray[2]] : rotArray,
+      springPosition: animateIn ? [posArray[0], posArray[1] + dropHeight, posArray[2]] : posArray,
+      springRotation: animateIn ? [rotArray[0], rotArray[1] + rotationAmount, rotArray[2]] : rotArray,
+      springScale: animateIn ? [initialScale, initialScale, initialScale] : scaleArray,
+    },
+    to: {
+      springPosition: posArray,
+      springRotation: rotArray,
+      springScale: scaleArray,
     },
     config: springConfig,
+    delay: isNew ? 200 : 0, // Add delay for new items
+    onRest: () => setAnimateIn(false), // Turn off animation state after completion
   });
-  
-  // Skip hover effects on low performance devices
-  const [hovered, setHovered] = useState(false);
-  const handlePointerOver = () => {
-    if (!lowPerformanceMode) setHovered(true);
-  };
-  const handlePointerOut = () => {
-    if (!lowPerformanceMode) setHovered(false);
-  };
 
-  // Set snorkel color to black if this is the snorkel model
+  // Apply shadows recursively
   useEffect(() => {
-    if (!clonedScene || !modelPath.includes('bravo-snorkel')) return;
-    
-    clonedScene.traverse((child: THREE.Object3D) => {
+    clonedScene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        const blackMaterial = new THREE.MeshStandardMaterial({
-          color: 0x000000,
-          roughness: 0.7,
-          metalness: 0.2
-        });
-        child.material = blackMaterial;
-      }
-    });
-  }, [clonedScene, modelPath]);
-
-  // Optimize mesh complexity for low performance mode
-  useEffect(() => {
-    if (!clonedScene || !lowPerformanceMode) return;
-    
-    clonedScene.traverse((child: any) => {
-      if (child.isMesh) {
-        // Simplify materials on low-end devices
-        if (child.material && child.material.map) {
-          child.material.map.minFilter = THREE.LinearFilter;
-          child.material.map.generateMipmaps = false;
+        child.castShadow = castShadow;
+        child.receiveShadow = receiveShadow;
+        // Optimization: disable matrix auto updates for static parts after initial placement
+        if (!lowPerformanceMode && !initialAnimation) {
+           child.matrixAutoUpdate = false;
         }
       }
     });
-  }, [clonedScene, lowPerformanceMode]);
+  }, [clonedScene, castShadow, receiveShadow, lowPerformanceMode, initialAnimation]);
 
-  // Highlight effect for hover with minimal intensity
-  useEffect(() => {
-    if (!clonedScene || lowPerformanceMode) return; // Skip effect on low performance mode
-    
-    clonedScene.traverse((child: any) => {
-      if (child.isMesh) {
-        // Store the original material
-        if (!child.userData.originalMaterial) {
-          child.userData.originalMaterial = child.material.clone();
+  // Fade in effect for new items
+  useFrame((state, delta) => {
+    if (groupRef.current && isNew) {
+      groupRef.current.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.material) {
+          const material = child.material as THREE.MeshStandardMaterial;
+          if (material.transparent === false) {
+            material.transparent = true; // Ensure material is transparent for fade-in
+          }
+          material.opacity = Math.min(material.opacity + delta * 2, 1); // Fade in over ~0.5 seconds
         }
-        
-        if (hovered) {
-          // Create very subtle highlight effect
-          const highlightMaterial = child.material.clone();
-          highlightMaterial.emissive = new THREE.Color(0x222222);
-          highlightMaterial.emissiveIntensity = 0.05;
-          child.material = highlightMaterial;
-        } else {
-          // Restore original material
-          child.material = child.userData.originalMaterial;
-        }
-      }
-    });
-  }, [hovered, clonedScene, lowPerformanceMode]);
-
-  // Lock-in animation with conditional intensity
-  useEffect(() => {
-    if (!isNew || !groupRef.current) return;
-
-    // Skip complex animations on low performance mode
-    if (lowPerformanceMode) {
-      // Simple instant animation for low performance devices
-      springPosition.start({
-        to: posArray,
-        config: { duration: 200 },
       });
-      springScale.start({
-        to: typeof scale === 'number' ? scale : scale[0],
-        config: { duration: 200 },
-      });
-      springRotation.start({
-        to: rotArray,
-        config: { duration: 200 },
-      });
-      return;
     }
+  });
 
-    const targetY = posArray[1];
-    const startY = targetY + dropHeight;
-    
-    springPosition.start({
-      from: [posArray[0], startY, posArray[2]],
-      to: posArray,
-      config: springConfig,
-    });
-
-    springScale.start({
-      from: initialScale,
-      to: typeof scale === 'number' ? scale : scale[0],
-      config: springConfig,
-    });
-
-    springRotation.start({
-      from: [rotArray[0], rotArray[1] + rotationAmount, rotArray[2]],
-      to: rotArray,
-      config: springConfig,
-    });
-  }, [isNew, lowPerformanceMode]);
-
-  // Apply shadows based on performance mode
+  // Add useEffect dependencies
   useEffect(() => {
-    if (!clonedScene) return;
-    
-    clonedScene.traverse((child: any) => {
-      if (child.isMesh) {
-        // Only cast shadows from larger objects on low performance mode
-        const meshVolume = child.geometry ? 
-          (child.geometry.boundingBox?.max.x - child.geometry.boundingBox?.min.x) * 
-          (child.geometry.boundingBox?.max.y - child.geometry.boundingBox?.min.y) * 
-          (child.geometry.boundingBox?.max.z - child.geometry.boundingBox?.min.z) : 0;
-          
-        // Skip shadow casting for small meshes on low performance devices
-        child.castShadow = lowPerformanceMode ? 
-          (castShadow && meshVolume > 0.1) : castShadow;
+    // If initialAnimation is false, immediately set to target state without spring
+    if (!initialAnimation) {
+       if (groupRef.current) {
+        groupRef.current.position.set(...posArray);
+        groupRef.current.rotation.set(...rotArray);
+        groupRef.current.scale.set(...scaleArray);
       }
-    });
-  }, [clonedScene, castShadow, lowPerformanceMode]);
-
-  // Fix any types
-  const handleLoad = (gltf: any) => {
-    // ... existing code ...
-  };
-
-  const handleError = (error: Error) => {
-    // ... existing code ...
-  };
+    }
+    // This effect handles the initial spring setup and updates
+    // Dependencies added based on linter warning
+  }, [initialAnimation, posArray, rotArray, scaleArray, springConfig, dropHeight, rotationAmount, initialScale, springPosition, springRotation, springScale]);
 
   if (!clonedScene) {
-    return null;
+    return null; // Or a loading indicator
   }
 
   return (
     <animated.group
       ref={groupRef}
-      position={springPosition}
-      rotation={springRotation}
-      scale={springScale}
-      onPointerOver={handlePointerOver}
-      onPointerOut={handlePointerOut}
+      position={springPosition as any} // Keep any for spring values
+      rotation={springRotation as any} // Keep any for spring values
+      scale={springScale as any} // Keep any for spring values
+      dispose={null} // Prevent disposal by parent components
     >
       <primitive object={clonedScene} />
     </animated.group>

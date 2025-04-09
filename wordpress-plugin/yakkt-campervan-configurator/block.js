@@ -3,7 +3,7 @@
  */
 const { registerBlockType } = wp.blocks;
 const { InspectorControls } = wp.editor;
-const { PanelBody, RangeControl, TextControl } = wp.components;
+const { PanelBody, TextControl } = wp.components;
 const { Fragment } = wp.element;
 
 /**
