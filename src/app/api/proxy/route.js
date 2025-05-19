@@ -5,9 +5,9 @@ export async function POST(request) {
     // Parse the incoming request body
     const body = await request.json();
     
-    // Use the correct WordPress staging URL
-    const wpApiUrl = process.env.WORDPRESS_API_URL || 'https://yakkttest.wpcomstaging.com/wp-json';
-    const apiKey = process.env.WORDPRESS_API_KEY || '';
+    // Use the correct WordPress URL from environment variable
+    const wpApiUrl = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://yakkttest.wpcomstaging.com/wp-json';
+    const apiKey = process.env.NEXT_PUBLIC_WORDPRESS_API_KEY || '';
     
     console.log('Proxying request to:', `${wpApiUrl}/yakkt/v1/create-order`);
     console.log('Request payload:', JSON.stringify(body));
