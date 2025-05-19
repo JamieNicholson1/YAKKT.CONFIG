@@ -91,17 +91,36 @@ export const AnimatedModel: React.FC<AnimatedModelProps> = ({
 
   // Apply shadows recursively
   useEffect(() => {
+    const isBravoSnorkel = modelPath === '/models/van-models/mwb-crafter/exterior-accessories/bravo-snorkel.glb';
+    const isFiammaAwning = modelPath === '/models/van-models/mwb-crafter/roof-rack-accessories/fiammaf45s-awning-closed.glb';
+
     clonedScene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.castShadow = castShadow;
         child.receiveShadow = receiveShadow;
+
+        // If it's the Bravo Snorkel OR the Fiamma Awning, set its material color to black
+        if (isBravoSnorkel || isFiammaAwning) {
+          if (Array.isArray(child.material)) {
+            // If material is an array, iterate through them
+            child.material.forEach(material => {
+              if (material instanceof THREE.MeshStandardMaterial) {
+                material.color.set('black');
+              }
+            });
+          } else if (child.material instanceof THREE.MeshStandardMaterial) {
+            // If it's a single material
+            child.material.color.set('black');
+          }
+        }
+
         // Optimization: disable matrix auto updates for static parts after initial placement
         if (!lowPerformanceMode && !initialAnimation) {
            child.matrixAutoUpdate = false;
         }
       }
     });
-  }, [clonedScene, castShadow, receiveShadow, lowPerformanceMode, initialAnimation]);
+  }, [clonedScene, castShadow, receiveShadow, lowPerformanceMode, initialAnimation, modelPath]);
 
   // Fade in effect for new items
   useFrame((state, delta) => {

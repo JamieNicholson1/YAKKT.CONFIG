@@ -10,7 +10,7 @@ export interface VanOption {
   id: string;
   name: string;
   price: number;
-  modelUrl: string | string[];
+  modelUrl?: string | string[];
   category: 'windows' | 'wheels' | 'roof-racks' | 'deck-panels' | 'roof-rack-accessories' | 'rear-door-carriers' | 'rear-door-accessories' | 'exterior-accessories';
   subCategory?: 'nearside' | 'offside' | 'rack-accessories';
   isExclusive: boolean;

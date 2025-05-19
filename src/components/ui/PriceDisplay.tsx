@@ -46,6 +46,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
       "Black Rhino Warlord": "17\" Black Dark Tint wheels with 225/65/17 BF Goodrich T/A KO2 tyres.",
       "Bravo Snorkel": "Raise air intake. Protects engine off-road.",
       "Front Bull Bar": "Front-end protection. Strong, clean design.",
+      "Lazer Lights - Grille": "Grille-mounted Lazer LED lights for enhanced visibility.",
       "Base Rack": "5083 aluminum roof rack. Powder-coated textured black.",
       "Deck Panels": "Single walkable 5083 aluminum panel. Textured black.",
       "Full Deck": "9x 5083 aluminum panels. Full roof coverage.",
@@ -58,6 +59,9 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
       "Fiamma F45s Awning 3.2m": "3.2m durable awning. Black/anthracite.",
       "Side Ladder": "5083 aluminum ladder. Powder-coated black.",
       "10x L-Track Eyelets": "10 strong eyelets. Secure your gear.",
+      "Front Runner Wolfpack Pro - 2x L": "Two Front Runner WolfPack Pro storage boxes (Left side), robust and stackable.",
+      "Front Runner Wolfpack Pro - 2x R": "Two Front Runner WolfPack Pro storage boxes (Right side), robust and stackable.",
+      "Front Runner Wolfpack Pro - 1x M": "Single Front Runner WolfPack Pro storage box (Middle), robust and stackable.",
       "NS Mini Carrier": "Near-side compact carrier. Aluminum, black coated.",
       "OS Mini Carrier": "Off-side compact carrier. Aluminum, black coated.",
       "NS Midi Carrier": "Near-side mid-size carrier. 5083 aluminum.",
@@ -201,10 +205,6 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
           <div className="flex justify-between items-center">
             <span className="text-gray-900 font-medium">Total Price</span>
             <span className="text-xl font-bold text-black">£{totalPrice.toLocaleString()}</span>
-          </div>
-          <div className="h-px bg-gray-100"></div>
-          <div className="text-sm text-gray-600">
-            Pay in 3 interest-free payments of <span className="font-medium">£{(totalPrice / 3).toFixed(2)}</span> with <span className="font-semibold text-[#003087]">PayPal</span>. <a href="#" className="text-blue-500 hover:underline">Learn more</a>
           </div>
         </div>
       </div>

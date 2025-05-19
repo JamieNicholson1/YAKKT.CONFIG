@@ -9,7 +9,9 @@ import {
   Truck, 
   Wrench,
   ShieldCheck,
-  CircleDot
+  CircleDot,
+  PanelTopClose,
+  PanelBottomClose
 } from 'lucide-react';
 
 const CATEGORY_GROUPS = {
@@ -119,43 +121,13 @@ const ConfiguratorControls: React.FC = () => {
 
         // Deck Panels
         {
-          id: 'full-deck',
-          name: 'Full Deck',
-          price: 1800,
-          modelUrl: [
-            '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-front.glb',
-            '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-middle.glb',
-            '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-back.glb'
-          ],
-          category: 'deck-panels' as const,
-          isExclusive: true,
-          conflictsWith: ['full-deck-rear-maxxfan', 'rear-deck', 'middle-deck', 'front-deck', 'rear-deck-maxxfan'],
-          dependsOn: ['roof-rack-base'],
-          description: 'Full deck roof rack system',
-        },
-        {
-          id: 'full-deck-rear-maxxfan',
-          name: 'Full Deck Rear MaxxFan',
-          price: 1800,
-          modelUrl: [
-            '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-front.glb',
-            '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-middle.glb',
-            '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-panels-maxxfan-rear.glb'
-          ],
-          category: 'deck-panels' as const,
-          isExclusive: true,
-          conflictsWith: ['full-deck', 'rear-deck', 'middle-deck', 'front-deck', 'rear-deck-maxxfan'],
-          dependsOn: ['roof-rack-base'],
-          description: 'Full deck roof rack with rear Maxxfan installation',
-        },
-        {
           id: 'rear-deck',
           name: 'Rear Deck',
           price: 600,
           modelUrl: '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-back.glb',
           category: 'deck-panels' as const,
-          isExclusive: true,
-          conflictsWith: ['full-deck', 'full-deck-rear-maxxfan', 'middle-deck', 'front-deck', 'rear-deck-maxxfan'],
+          isExclusive: false,
+          conflictsWith: ['rear-deck-maxxfan'],
           dependsOn: ['roof-rack-base'],
           description: 'Rear section deck panel',
         },
@@ -166,7 +138,7 @@ const ConfiguratorControls: React.FC = () => {
           modelUrl: '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-panels-maxxfan-rear.glb',
           category: 'deck-panels' as const,
           isExclusive: true,
-          conflictsWith: ['full-deck', 'full-deck-rear-maxxfan', 'rear-deck', 'middle-deck', 'front-deck'],
+          conflictsWith: ['rear-deck'],
           dependsOn: ['roof-rack-base'],
           description: 'Rear deck with Maxxfan installation',
         },
@@ -176,8 +148,8 @@ const ConfiguratorControls: React.FC = () => {
           price: 600,
           modelUrl: '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-middle.glb',
           category: 'deck-panels' as const,
-          isExclusive: true,
-          conflictsWith: ['full-deck', 'full-deck-rear-maxxfan', 'rear-deck', 'front-deck', 'rear-deck-maxxfan'],
+          isExclusive: false,
+          conflictsWith: [],
           dependsOn: ['roof-rack-base'],
           description: 'Middle section deck panel',
         },
@@ -187,8 +159,8 @@ const ConfiguratorControls: React.FC = () => {
           price: 600,
           modelUrl: '/models/van-models/mwb-crafter/roof-racks/deck-panels/deck-front.glb',
           category: 'deck-panels' as const,
-          isExclusive: true,
-          conflictsWith: ['full-deck', 'full-deck-rear-maxxfan', 'rear-deck', 'middle-deck', 'rear-deck-maxxfan'],
+          isExclusive: false,
+          conflictsWith: [],
           dependsOn: ['roof-rack-base'],
           description: 'Front section deck panel',
         },
@@ -198,7 +170,7 @@ const ConfiguratorControls: React.FC = () => {
           id: 'awning-brackets',
           name: 'Awning Brackets',
           price: 175,
-          modelUrl: '/models/van-models/mwb-crafter/roof-racks/rack-accessories/awning-brackets.glb',
+          modelUrl: '/models/van-models/mwb-crafter/roof-rack-accessories/awningbrackets.glb',
           category: 'roof-rack-accessories' as const,
           isExclusive: false,
           conflictsWith: [],
@@ -209,34 +181,66 @@ const ConfiguratorControls: React.FC = () => {
           id: 'fiamma-awning',
           name: 'Fiamma F45s Awning 3.2m Black/Anthra',
           price: 800,
-          modelUrl: '/models/van-models/mwb-crafter/roof-racks/rack-accessories/fiammaf45s-awning-closed.glb',
+          modelUrl: '/models/van-models/mwb-crafter/roof-rack-accessories/fiammaf45s-awning-closed.glb',
           category: 'roof-rack-accessories' as const,
           isExclusive: false,
           conflictsWith: [],
-          dependsOn: ['roof-rack-base', 'full-deck', 'full-deck-rear-maxxfan', 'rear-deck', 'middle-deck', 'front-deck'],
+          dependsOn: ['roof-rack-base', 'rear-deck', 'rear-deck-maxxfan', 'middle-deck', 'front-deck', 'awning-brackets'],
           description: 'Fiamma F45s retractable awning',
         },
         {
           id: 'roof-rack-ladder',
           name: 'Side Ladder',
-          price: 950,
-          modelUrl: '/models/van-models/mwb-crafter/roof-racks/rack-accessories/ladder.glb',
+          price: 800,
+          modelUrl: '/models/van-models/mwb-crafter/roof-rack-accessories/ladder.glb',
           category: 'roof-rack-accessories' as const,
           isExclusive: false,
           conflictsWith: [],
-          dependsOn: ['roof-rack-base', 'full-deck', 'full-deck-rear-maxxfan', 'rear-deck', 'middle-deck', 'front-deck'],
+          dependsOn: ['roof-rack-base', 'rear-deck', 'rear-deck-maxxfan', 'middle-deck', 'front-deck'],
           description: 'Access ladder for roof rack',
         },
         {
           id: 'l-track-eyelets',
           name: '10x L-Track Eyelets',
           price: 20,
-          modelUrl: '/models/van-models/mwb-crafter/roof-racks/rack-accessories/l-track-eyelets.glb',
           category: 'roof-rack-accessories' as const,
           isExclusive: false,
           conflictsWith: [],
           dependsOn: ['roof-rack-base'],
           description: 'Set of 10 L-Track mounting eyelets',
+        },
+        {
+          id: 'front-runner-wolfpack-pro-2x-l',
+          name: 'Front Runner Wolfpack Pro - 2x L',
+          price: 59,
+          modelUrl: '/models/van-models/mwb-crafter/roof-rack-accessories/wolfpack-2x-l.glb',
+          category: 'roof-rack-accessories' as const,
+          isExclusive: false,
+          conflictsWith: [],
+          dependsOn: ['roof-rack-base'],
+          description: 'Two Front Runner WolfPack Pro storage boxes (Left side)',
+        },
+        {
+          id: 'front-runner-wolfpack-pro-2x-r',
+          name: 'Front Runner Wolfpack Pro - 2x R',
+          price: 59,
+          modelUrl: '/models/van-models/mwb-crafter/roof-rack-accessories/wolfpack-2x-r.glb',
+          category: 'roof-rack-accessories' as const,
+          isExclusive: false,
+          conflictsWith: [],
+          dependsOn: ['roof-rack-base'],
+          description: 'Two Front Runner WolfPack Pro storage boxes (Right side)',
+        },
+        {
+          id: 'front-runner-wolfpack-pro-1x-m',
+          name: 'Front Runner Wolfpack Pro - 1x M',
+          price: 59,
+          modelUrl: '/models/van-models/mwb-crafter/roof-rack-accessories/wolfpack-1x-m.glb',
+          category: 'roof-rack-accessories' as const,
+          isExclusive: false,
+          conflictsWith: [],
+          dependsOn: ['roof-rack-base'],
+          description: 'Single Front Runner WolfPack Pro storage box (Middle)',
         },
 
         // Rear Door Carriers
@@ -319,6 +323,16 @@ const ConfiguratorControls: React.FC = () => {
           conflictsWith: [],
           description: 'Heavy-duty front bull bar protection',
         },
+        {
+          id: 'lazer-lights-grille',
+          name: 'Lazer Lights - Grille',
+          price: 600,
+          modelUrl: '/models/van-models/mwb-crafter/exterior-accessories/lazerlights.glb',
+          category: 'exterior-accessories' as const,
+          isExclusive: false,
+          conflictsWith: [],
+          description: 'Grille-mounted Lazer LED lights',
+        },
       ],
     };
 
@@ -353,6 +367,20 @@ const ConfiguratorControls: React.FC = () => {
     acc[category].push(option);
     return acc;
   }, {});
+
+  const handleCollapseAll = () => {
+    setOpenCategories({});
+  };
+
+  const handleExpandAll = () => {
+    const newOpenCategories: Record<string, boolean> = {};
+    Object.keys(groupedOptions).forEach(categoryKey => {
+      newOpenCategories[categoryKey] = true;
+    });
+    setOpenCategories(newOpenCategories);
+  };
+
+  const anyCategoryOpen = Object.values(openCategories).some(isOpen => isOpen);
 
   // Check if any option in a category is selected
   const isCategorySelected = (category: string): boolean => {
@@ -587,6 +615,24 @@ const ConfiguratorControls: React.FC = () => {
           })}
         </div>
       ))}
+
+      {/* Floating Action Button */}
+      {options.length > 0 && (
+        <button
+          onClick={anyCategoryOpen ? handleCollapseAll : handleExpandAll}
+          className="fixed bottom-28 right-4 z-50 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm py-2 px-4 rounded-full shadow-lg transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-opacity-75 flex items-center space-x-2"
+          aria-label={anyCategoryOpen ? "Collapse all categories" : "Expand all categories"}
+        >
+          {anyCategoryOpen ? (
+            <PanelTopClose className="w-4 h-4" />
+          ) : (
+            <PanelBottomClose className="w-4 h-4" />
+          )}
+          <span>
+            {anyCategoryOpen ? 'Collapse All' : 'Expand All'}
+          </span>
+        </button>
+      )}
     </div>
   );
 };

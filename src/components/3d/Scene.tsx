@@ -113,8 +113,13 @@ const Scene = forwardRef<SceneRef>((props, ref) => {
     }
     
     selectedOptions.forEach(option => {
-      const modelUrls = Array.isArray(option.modelUrl) ? option.modelUrl : [option.modelUrl];
-      modelUrls.forEach(url => useGLTF.preload(url));
+      // Only preload if modelUrl exists and is not empty
+      if (option.modelUrl && (Array.isArray(option.modelUrl) ? option.modelUrl.length > 0 : option.modelUrl)) {
+        const modelUrls = Array.isArray(option.modelUrl) ? option.modelUrl : [option.modelUrl];
+        modelUrls.forEach(url => {
+          if (url) useGLTF.preload(url); // Ensure url is not null/undefined/empty string before preloading
+        });
+      }
     });
   }, [selectedChassis, selectedOptions]);
 
@@ -212,19 +217,27 @@ const Scene = forwardRef<SceneRef>((props, ref) => {
               )}
 
               {selectedOptions.map((option) => {
+                // Check if modelUrl exists and is not empty before attempting to render
+                if (!option.modelUrl || (Array.isArray(option.modelUrl) && option.modelUrl.length === 0) || (!Array.isArray(option.modelUrl) && !option.modelUrl)) {
+                  return null; // Don't render anything if no modelUrl
+                }
+
                 const modelUrls = Array.isArray(option.modelUrl) ? option.modelUrl : [option.modelUrl];
-                return modelUrls.map((url, index) => (
-                  <AnimatedModel
-                    key={`${option.id}-${index}`}
-                    modelPath={url}
-                    position={[0, 0, 0]}
-                    rotation={[0, 0, 0]}
-                    scale={1}
-                    castShadow={true}
-                    isNew={option.id === newOptionId}
-                    lowPerformanceMode={lowPerformanceMode}
-                  />
-                ));
+                return modelUrls.map((url, index) => {
+                  if (!url) return null; // Skip if a URL in the array is empty/null
+                  return (
+                    <AnimatedModel
+                      key={`${option.id}-${index}`}
+                      modelPath={url}
+                      position={[0, 0, 0]}
+                      rotation={[0, 0, 0]}
+                      scale={1}
+                      castShadow={true}
+                      isNew={option.id === newOptionId}
+                      lowPerformanceMode={lowPerformanceMode}
+                    />
+                  );
+                });
               })}
             </LoadingManager>
           </Suspense>
