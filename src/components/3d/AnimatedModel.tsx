@@ -2,8 +2,8 @@
 
 import { useRef, useState, useEffect, useMemo } from 'react';
 import { useSpring, animated } from '@react-spring/three';
-import { Vector3, Euler, Group } from 'three';
-import { useGLTF } from '@react-three/drei';
+import { Vector3, Euler, Group, Mesh, MeshStandardMaterial, SkinnedMesh, Color } from 'three';
+import { useGLTF, useAnimations } from '@react-three/drei';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 
@@ -54,7 +54,8 @@ export const AnimatedModel: React.FC<AnimatedModelProps> = ({
   lowPerformanceMode = false,
 }) => {
   const groupRef = useRef<Group>(null);
-  const { scene } = useGLTF(modelPath);
+  const { scene, animations } = useGLTF(modelPath, true);
+  const { actions } = useAnimations(animations, groupRef);
 
   // Memoize the cloned scene
   const clonedScene = useMemo(() => scene.clone(), [scene]);
@@ -95,7 +96,7 @@ export const AnimatedModel: React.FC<AnimatedModelProps> = ({
     const isFiammaAwning = modelPath === '/models/van-models/mwb-crafter/roof-rack-accessories/fiammaf45s-awning-closed.glb';
 
     clonedScene.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
+      if (child instanceof Mesh || child instanceof SkinnedMesh) {
         child.castShadow = castShadow;
         child.receiveShadow = receiveShadow;
 
@@ -117,6 +118,41 @@ export const AnimatedModel: React.FC<AnimatedModelProps> = ({
         // Optimization: disable matrix auto updates for static parts after initial placement
         if (!lowPerformanceMode && !initialAnimation) {
            child.matrixAutoUpdate = false;
+        }
+
+        // Ensure material is MeshStandardMaterial for performance and PBR properties
+        if (!(child.material instanceof MeshStandardMaterial)) {
+          const existingMaterial = child.material as any;
+          const newMaterial = new MeshStandardMaterial();
+          
+          if (existingMaterial.color) newMaterial.color.copy(existingMaterial.color);
+          if (existingMaterial.map) newMaterial.map = existingMaterial.map;
+          if (existingMaterial.normalMap) newMaterial.normalMap = existingMaterial.normalMap;
+          if (existingMaterial.roughnessMap) newMaterial.roughnessMap = existingMaterial.roughnessMap;
+          if (existingMaterial.metalnessMap) newMaterial.metalnessMap = existingMaterial.metalnessMap;
+          if (existingMaterial.aoMap) newMaterial.aoMap = existingMaterial.aoMap;
+          if (existingMaterial.emissiveMap) newMaterial.emissiveMap = existingMaterial.emissiveMap;
+          if (existingMaterial.emissive) newMaterial.emissive.copy(existingMaterial.emissive);
+          
+          newMaterial.metalness = existingMaterial.metalness !== undefined ? existingMaterial.metalness : 0.5; // Default if not specified
+          newMaterial.roughness = existingMaterial.roughness !== undefined ? existingMaterial.roughness : 0.7; // Default if not specified
+          
+          child.material = newMaterial;
+        }
+
+        // Apply specific color overrides
+        if (modelPath.includes('snorkel.glb')) {
+          (child.material as MeshStandardMaterial).color.set(new Color('black'));
+        }
+        if (modelPath.includes('/models/van-models/mwb-crafter/wheels/black-rhino-at.glb')) {
+          (child.material as MeshStandardMaterial).color.set(new Color('black'));
+        }
+
+        // Adjust material for low performance mode
+        if (lowPerformanceMode) {
+          const material = child.material as MeshStandardMaterial;
+          material.metalness = 0.3;
+          material.roughness = 0.8;
         }
       }
     });
@@ -150,6 +186,17 @@ export const AnimatedModel: React.FC<AnimatedModelProps> = ({
     // This effect handles the initial spring setup and updates
     // Dependencies added based on linter warning
   }, [initialAnimation, posArray, rotArray, scaleArray, springConfig, dropHeight, rotationAmount, initialScale, springPosition, springRotation, springScale]);
+
+  useEffect(() => {
+    if (actions) {
+      Object.values(actions).forEach((action) => action?.play());
+    }
+    return () => {
+      if (actions) {
+        Object.values(actions).forEach((action) => action?.stop());
+      }
+    };
+  }, [actions]);
 
   if (!clonedScene) {
     return null; // Or a loading indicator

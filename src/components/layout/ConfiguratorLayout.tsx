@@ -32,6 +32,7 @@ const ConfiguratorLayout: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<'configure' | 'summary' | 'ai' | 'community'>('configure');
   const [showSavingsBanner, setShowSavingsBanner] = useState(false);
+  const [hasShownSavingsCelebration, setHasShownSavingsCelebration] = useState(false);
   const { priceData, chassisId } = useConfiguratorStore();
   const { totalPrice } = priceData;
   const { isLoading: checkoutLoading, error: checkoutError, handleCheckout } = useCheckout();
@@ -80,14 +81,17 @@ const ConfiguratorLayout: React.FC = () => {
 
   // Control savings banner visibility
   useEffect(() => {
-    if (savings.percentage >= 10) {
+    if (savings.percentage >= 10 && !hasShownSavingsCelebration) {
       setShowSavingsBanner(true);
+      setHasShownSavingsCelebration(true);
       const timer = setTimeout(() => {
         setShowSavingsBanner(false);
       }, 5000);
       return () => clearTimeout(timer);
+    } else if (savings.percentage < 10 && showSavingsBanner) {
+      setShowSavingsBanner(false);
     }
-  }, [savings.percentage]);
+  }, [savings.percentage, hasShownSavingsCelebration, showSavingsBanner]);
 
   // Reset sharing state when component unmounts
   useEffect(() => {

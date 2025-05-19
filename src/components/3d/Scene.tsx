@@ -2,7 +2,7 @@
 'use client';
 
 import { Canvas, useThree } from '@react-three/fiber';
-import { Stage, OrbitControls, useProgress, useGLTF, BakeShadows } from '@react-three/drei';
+import { Stage, OrbitControls, useProgress, useGLTF, BakeShadows, Html } from '@react-three/drei';
 import { Suspense, useState, useEffect, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import useConfiguratorStore from '@/store/configurator';
 import { AnimatedModel } from '@/components/3d/AnimatedModel';
@@ -41,6 +41,16 @@ const LoadingManager = ({ children }: { children: React.ReactNode }) => {
     </>
   );
 };
+
+// Simple spinner for Suspense fallback
+const SimpleSpinner = () => (
+  <Html center style={{ pointerEvents: 'none' }}>
+    <div className="flex flex-col items-center justify-center">
+      <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+      {/* Optional: <p className="mt-2 text-xs text-gray-500">Loading 3D View...</p> */}
+    </div>
+  </Html>
+);
 
 const Scene = forwardRef<SceneRef>((props, ref) => {
   const [isClient, setIsClient] = useState(false);
@@ -202,7 +212,7 @@ const Scene = forwardRef<SceneRef>((props, ref) => {
           environment="city"
           preset={lowPerformanceMode ? "rembrandt" : "soft"}
         >
-          <Suspense fallback={null}>
+          <Suspense fallback={<SimpleSpinner />}>
             <LoadingManager>
               {selectedChassis && (
                 <AnimatedModel
