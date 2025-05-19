@@ -7,6 +7,7 @@ import { Suspense, useState, useEffect, forwardRef, useImperativeHandle, useCall
 import useConfiguratorStore from '@/store/configurator';
 import { AnimatedModel } from '@/components/3d/AnimatedModel';
 import { LoadingIndicator } from '@/components/3d/LoadingIndicator';
+import { TapeMeasureTool } from './TapeMeasureTool';
 
 // Screenshot capture component
 const ScreenshotHandler = ({ onReady }: { onReady: (capture: () => string) => void }) => {
@@ -31,6 +32,10 @@ export interface SceneRef {
   captureScreenshot: () => string;
 }
 
+interface SceneProps {
+  isTapeMeasureActive: boolean;
+}
+
 // Loading manager component
 const LoadingManager = ({ children }: { children: React.ReactNode }) => {
   const { progress } = useProgress();
@@ -52,7 +57,7 @@ const SimpleSpinner = () => (
   </Html>
 );
 
-const Scene = forwardRef<SceneRef>((props, ref) => {
+const Scene = forwardRef<SceneRef, SceneProps>(({ isTapeMeasureActive }, ref) => {
   const [isClient, setIsClient] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { chassis, options, chassisId, selectedOptionIds } = useConfiguratorStore();
@@ -169,6 +174,7 @@ const Scene = forwardRef<SceneRef>((props, ref) => {
         performance={{ min: 0.5 }}
       >
         <ScreenshotHandler onReady={handleScreenshotReady} />
+        {isTapeMeasureActive && <TapeMeasureTool isActive={isTapeMeasureActive} />}
         <color attach="background" args={['#f5f5f5']} />
         <fog attach="fog" args={['#f5f5f5', 10, 20]} />
         

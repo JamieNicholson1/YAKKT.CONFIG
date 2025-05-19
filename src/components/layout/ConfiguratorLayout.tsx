@@ -15,6 +15,7 @@ import {
   Download,
   Link,
   Instagram,
+  Ruler,
 } from 'lucide-react';
 import NextImage from 'next/image';
 import useConfiguratorStore from '@/store/configurator';
@@ -51,6 +52,7 @@ const ConfiguratorLayout: React.FC = () => {
   const [cardImageUrl, setCardImageUrl] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [email, setEmail] = useState<string>('');
+  const [isTapeMeasureActive, setIsTapeMeasureActive] = useState(false);
   
   // Load community builds from Supabase
   const { 
@@ -775,30 +777,165 @@ const ConfiguratorLayout: React.FC = () => {
     setAuthorName(e.target.value);
   };
 
+  const handleBuildNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBuildName(e.target.value);
+  };
+
+  const tabContent = () => {
+    switch (activeTab) {
+      case 'configure':
+        return <ConfiguratorControls />;
+      case 'summary':
+        return <PriceDisplay detailed />;
+      case 'community':
+        return (
+          <div className="space-y-6">
+            <div className="space-y-5 pt-2">
+              <div className="flex flex-col space-y-4">
+                {/* Name Your Van field */}
+                <div className="flex flex-col space-y-1.5">
+                  <label htmlFor="community-van-name" className="font-mono text-xs text-gray-700 font-medium">
+                    Name Your Van
+                  </label>
+                  <input
+                    id="community-van-name"
+                    value={buildName}
+                    onChange={handleBuildNameChange}
+                    placeholder="Midnight Rover"
+                    className="font-mono text-sm border border-gray-200 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500 w-full"
+                  />
+                </div>
+                
+                {/* Your Name field */}
+                <div className="flex flex-col space-y-1.5">
+                  <label htmlFor="community-author-name" className="font-mono text-xs text-gray-700 font-medium">
+                    Your Name
+                  </label>
+                  <input
+                    id="community-author-name"
+                    value={authorName}
+                    onChange={handleAuthorChange}
+                    placeholder="Alex"
+                    className="font-mono text-sm border border-gray-200 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500 w-full"
+                  />
+                </div>
+                
+                {/* Your Email field */}
+                <div className="flex flex-col space-y-1.5">
+                  <label htmlFor="community-email" className="font-mono text-xs text-gray-700 font-medium">
+                    Your Email
+                  </label>
+                  <input
+                    id="community-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="alex@email.com"
+                    className="font-mono text-sm border border-gray-200 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500 w-full"
+                  />
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <Button
+                    variant="default"
+                    onClick={handleSaveBuild}
+                    disabled={isSaving}
+                    className="flex-1 h-7 font-mono text-xs bg-black hover:bg-amber-500 text-white"
+                  >
+                      {isSaving ? (
+                      <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                      ) : (
+                      <Save className="w-3 h-3 mr-1.5" />
+                      )}
+                    Save My Build
+                  </Button>
+                  
+                  <Button
+                    variant="default"
+                    onClick={handleShareBuild}
+                    disabled={isSharing || showShareModal}
+                    className="flex-1 h-7 font-mono text-xs bg-black hover:bg-amber-500 text-white"
+                  >
+                      {isSharing ? (
+                      <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                      ) : (
+                      <Share2 className="w-3 h-3 mr-1.5" />
+                      )}
+                    Share My Build
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex items-center pt-2">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 stroke-[2.5px] text-black" />
+                  <h2 className="font-mono text-sm text-black">Popular Configurations</h2>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {communityLoading && (
+                <div className="flex justify-center items-center py-6">
+                  <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+                </div>
+              )}
+              
+              {communityError && (
+                <div className="py-4 text-center text-red-500 font-mono text-sm">
+                  Failed to load community builds. Please try again.
+                </div>
+              )}
+              
+              {!communityLoading && !communityError && communityBuilds.length === 0 && (
+                <div className="py-4 text-center text-gray-500 font-mono text-sm">
+                  No community builds yet. Be the first to save your configuration!
+                </div>
+              )}
+
+              {communityBuilds.map((build) => (
+                <BuildCard
+                  key={build.id}
+                  title={build.title}
+                  author={build.author}
+                  likes={build.likes}
+                  selectedOptions={build.selected_options}
+                  authorColor={build.author_color}
+                  onLike={() => handleLike(build.id!)}
+                  onLoad={() => handleLoadBuild(build.id!)}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      default:
+        return <ConfiguratorControls />;
+    }
+  };
+
+  // JSX for the layout
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-white max-w-screen overflow-x-hidden">
-      {/* 3D View */}
-      <div className="h-[50vh] lg:h-screen lg:flex-1 relative min-w-0">
-        <Scene ref={sceneRef} />
+    <div className="flex flex-col md:flex-row h-screen overflow-hidden bg-gray-100 dark:bg-gray-900">
+      {/* Main 3D Scene Area */} 
+      <div className="flex-grow h-1/2 md:h-full relative group">
+        <Scene ref={sceneRef} isTapeMeasureActive={isTapeMeasureActive} />
+
+        {/* Floating Action Buttons for 3D Scene - Top Right */} 
+        <div className="absolute top-4 right-4 flex flex-col space-y-2 z-20">
+          <Button 
+            variant="outline"
+            size="icon"
+            className={`bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full shadow-lg ${isTapeMeasureActive ? 'ring-2 ring-amber-500' : ''}`}
+            onClick={() => setIsTapeMeasureActive(!isTapeMeasureActive)}
+            aria-label={isTapeMeasureActive ? "Deactivate Tape Measure" : "Activate Tape Measure"}
+          >
+            <Ruler className={`h-5 w-5 ${isTapeMeasureActive ? 'text-amber-500' : 'text-gray-600 dark:text-gray-300'}`} />
+          </Button>
+        </div>
+
         {showSavingsBanner && savings.percentage >= 10 && (
           <SavingsBanner percentage={savings.percentage} />
-        )}
-        <div className="absolute top-4 left-4">
-          <h1 className="text-xl lg:text-2xl font-bold text-black font-mono uppercase tracking-wide leading-tight">
-            YAKKT<br />CONFIGURATOR
-          </h1>
-        </div>
-        {activeTab === 'ai' && (
-          <div className="absolute inset-x-0 bottom-8 flex items-center justify-center pointer-events-none">
-            <Button
-              onClick={handleCaptureClick}
-              className="bg-amber-400 hover:bg-amber-500 text-white font-mono uppercase tracking-wide px-4 lg:px-6 py-2 lg:py-3 rounded-lg shadow-lg pointer-events-auto flex items-center gap-2 transition-all text-sm lg:text-base"
-              size="lg"
-            >
-              <Camera className="w-4 h-4 lg:w-5 lg:h-5 stroke-[2.5px]" />
-              Capture Screenshot
-            </Button>
-          </div>
         )}
       </div>
 
@@ -845,219 +982,7 @@ const ConfiguratorLayout: React.FC = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-3 lg:p-4">
-          {activeTab === 'configure' && (
-            <div className="space-y-6">
-              <div className="space-y-5 pt-2">
-                <div className="flex flex-col space-y-4">
-                  {/* Name Your Van field */}
-                  <div className="flex flex-col space-y-1.5">
-                    <label htmlFor="van-name" className="font-mono text-xs text-gray-700 font-medium">
-                      Name Your Van
-                    </label>
-                    <input
-                      id="van-name"
-                      value={buildName}
-                      onChange={(e) => setBuildName(e.target.value)}
-                      placeholder="Midnight Rover"
-                      className="font-mono text-sm border border-gray-200 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500 w-full"
-                    />
-                  </div>
-                  
-                  {/* Your Name field */}
-                  <div className="flex flex-col space-y-1.5">
-                    <label htmlFor="author-name" className="font-mono text-xs text-gray-700 font-medium">
-                      Your Name
-                    </label>
-                    <input
-                      id="author-name"
-                      value={authorName}
-                      onChange={handleAuthorChange}
-                      placeholder="Alex"
-                      className="font-mono text-sm border border-gray-200 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500 w-full"
-                    />
-                  </div>
-                  
-                  {/* Your Email field */}
-                  <div className="flex flex-col space-y-1.5">
-                    <label htmlFor="email" className="font-mono text-xs text-gray-700 font-medium">
-                      Your Email
-                    </label>
-                    <input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="alex@email.com"
-                      className="font-mono text-sm border border-gray-200 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500 w-full"
-                    />
-                  </div>
-                  
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-between gap-3 pt-1">
-                    <Button
-                      variant="default"
-                      onClick={handleSaveBuild}
-                      disabled={isSaving}
-                      className="flex-1 h-7 font-mono text-xs bg-black hover:bg-amber-500 text-white"
-                    >
-                        {isSaving ? (
-                        <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                        ) : (
-                        <Save className="w-3 h-3 mr-1.5" />
-                        )}
-                      Save My Build
-                    </Button>
-                    
-                    <Button
-                      variant="default"
-                      onClick={handleShareBuild}
-                      disabled={isSharing || showShareModal}
-                      className="flex-1 h-7 font-mono text-xs bg-black hover:bg-amber-500 text-white"
-                    >
-                        {isSharing ? (
-                        <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                        ) : (
-                        <Share2 className="w-3 h-3 mr-1.5" />
-                        )}
-                      Share My Build
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <ConfiguratorControls />
-            </div>
-          )}
-
-          {activeTab === 'community' && (
-            <div className="space-y-6">
-              <div className="space-y-5 pt-2">
-                <div className="flex flex-col space-y-4">
-                  {/* Name Your Van field */}
-                  <div className="flex flex-col space-y-1.5">
-                    <label htmlFor="community-van-name" className="font-mono text-xs text-gray-700 font-medium">
-                      Name Your Van
-                    </label>
-                    <input
-                      id="community-van-name"
-                      value={buildName}
-                      onChange={(e) => setBuildName(e.target.value)}
-                      placeholder="Midnight Rover"
-                      className="font-mono text-sm border border-gray-200 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500 w-full"
-                    />
-                  </div>
-                  
-                  {/* Your Name field */}
-                  <div className="flex flex-col space-y-1.5">
-                    <label htmlFor="community-author-name" className="font-mono text-xs text-gray-700 font-medium">
-                      Your Name
-                    </label>
-                    <input
-                      id="community-author-name"
-                      value={authorName}
-                      onChange={handleAuthorChange}
-                      placeholder="Alex"
-                      className="font-mono text-sm border border-gray-200 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500 w-full"
-                    />
-                  </div>
-                  
-                  {/* Your Email field */}
-                  <div className="flex flex-col space-y-1.5">
-                    <label htmlFor="community-email" className="font-mono text-xs text-gray-700 font-medium">
-                      Your Email
-                    </label>
-                    <input
-                      id="community-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="alex@email.com"
-                      className="font-mono text-sm border border-gray-200 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500 w-full"
-                    />
-                  </div>
-                  
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-between gap-3 pt-1">
-                    <Button
-                      variant="default"
-                      onClick={handleSaveBuild}
-                      disabled={isSaving}
-                      className="flex-1 h-7 font-mono text-xs bg-black hover:bg-amber-500 text-white"
-                    >
-                        {isSaving ? (
-                        <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                        ) : (
-                        <Save className="w-3 h-3 mr-1.5" />
-                        )}
-                      Save My Build
-                    </Button>
-                    
-                    <Button
-                      variant="default"
-                      onClick={handleShareBuild}
-                      disabled={isSharing || showShareModal}
-                      className="flex-1 h-7 font-mono text-xs bg-black hover:bg-amber-500 text-white"
-                    >
-                        {isSharing ? (
-                        <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
-                        ) : (
-                        <Share2 className="w-3 h-3 mr-1.5" />
-                        )}
-                      Share My Build
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="flex items-center pt-2">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 stroke-[2.5px] text-black" />
-                    <h2 className="font-mono text-sm text-black">Popular Configurations</h2>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {communityLoading && (
-                  <div className="flex justify-center items-center py-6">
-                    <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
-                  </div>
-                )}
-                
-                {communityError && (
-                  <div className="py-4 text-center text-red-500 font-mono text-sm">
-                    Failed to load community builds. Please try again.
-                  </div>
-                )}
-                
-                {!communityLoading && !communityError && communityBuilds.length === 0 && (
-                  <div className="py-4 text-center text-gray-500 font-mono text-sm">
-                    No community builds yet. Be the first to save your configuration!
-                  </div>
-                )}
-
-                {communityBuilds.map((build) => (
-                  <BuildCard
-                    key={build.id}
-                    title={build.title}
-                    author={build.author}
-                    likes={build.likes}
-                    selectedOptions={build.selected_options}
-                    authorColor={build.author_color}
-                    onLike={() => handleLike(build.id!)}
-                    onLoad={() => handleLoadBuild(build.id!)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'summary' && (
-            <div className="space-y-6">
-              <h1 className="text-xl font-bold text-gray-900 font-mono uppercase tracking-wide">
-                ORDER SUMMARY
-              </h1>
-              <PriceDisplay detailed />
-            </div>
-          )}
+          {tabContent()}
         </div>
 
         {/* Footer Actions */}
