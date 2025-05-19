@@ -1,49 +1,34 @@
 'use client';
 
-import { useRef, useEffect } from 'react';
-import { useFrame } from '@react-three/fiber';
-import { Mesh, MeshBasicMaterial, Group } from 'three';
-import { useSpring, animated } from '@react-spring/three';
+import { Html } from '@react-three/drei';
+import { useSpring, animated } from '@react-spring/web'; // Use web for HTML animations
 
 interface LoadingIndicatorProps {
   progress?: number;
 }
 
 export const LoadingIndicator = ({ progress = 0 }: LoadingIndicatorProps) => {
-  const groupRef = useRef<Group>(null);
-  const meshRef = useRef<Mesh>(null);
-  
-  // Fade animation
   const { opacity } = useSpring({
     opacity: progress < 100 ? 1 : 0,
-    config: {
-      tension: 280,
-      friction: 120,
-    },
+    config: { tension: 280, friction: 60 }, // Adjusted friction for potentially smoother fade
+    delay: progress < 100 ? 0 : 300, // Optional: slight delay before fading out
   });
 
-  // Subtle rotation animation
-  useFrame((state) => {
-    if (groupRef.current) {
-      groupRef.current.rotation.y = state.clock.elapsedTime * 0.5;
-    }
-  });
-
-  // Update material opacity
-  useEffect(() => {
-    if (meshRef.current) {
-      const material = meshRef.current.material as MeshBasicMaterial;
-      material.transparent = true;
-      material.opacity = progress < 100 ? 0.4 : 0;
-    }
-  }, [progress]);
+  // Early return if fully loaded and opacity is zero to avoid rendering an empty Html component
+  if (progress >= 100 && opacity.get() === 0) {
+    return null;
+  }
 
   return (
-    <animated.group ref={groupRef} scale={opacity.to(o => o * 0.15)}>
-      <mesh ref={meshRef}>
-        <torusGeometry args={[1, 0.2, 16, 32]} />
-        <meshBasicMaterial color="#94a3b8" transparent />
-      </mesh>
-    </animated.group>
+    <Html center style={{ pointerEvents: 'none' }}> {/* Added pointerEvents: none to prevent blocking interactions */}
+      <animated.div style={{ opacity }} className="flex flex-col items-center justify-center">
+        {/* TailwindCSS Spinner */}
+        <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+        {/* Optional: Progress percentage text */}
+        {progress < 100 && (
+          <p className="mt-3 text-sm text-gray-600 font-medium">{Math.round(progress)}%</p>
+        )}
+      </animated.div>
+    </Html>
   );
 }; 
