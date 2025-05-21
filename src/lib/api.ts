@@ -17,8 +17,9 @@ interface CheckoutPayload {
 
 interface CheckoutResponse {
   success: boolean;
-  orderId: number;
-  checkoutUrl: string;
+  orderId?: number;
+  checkoutUrl?: string;
+  addUrl?: string;
 }
 
 /**
@@ -70,7 +71,12 @@ export const createOrder = async (
  * Redirects to the WooCommerce checkout page in the parent window
  * This prevents the checkout from loading inside the iframe
  */
-export const redirectToCheckout = (checkoutUrl: string): void => {
+export const redirectToCheckout = (url: string): void => {
+  if (!url) {
+    console.error('No URL provided for checkout redirection');
+    return;
+  }
+
   // First try to detect if we're in an iframe
   const isInIframe = (() => {
     try {
@@ -82,20 +88,41 @@ export const redirectToCheckout = (checkoutUrl: string): void => {
     }
   })();
 
-  // Try to redirect the parent window if we're in an iframe
+  // If we're in an iframe, try to communicate with the parent
   if (isInIframe) {
     try {
-      // Check if window.top is accessible
-      if (window.top) {
-        window.top.location.href = checkoutUrl;
-        return;
-      }
-    } catch {
-      // Silently catch any errors and fall through to the default redirect
-      console.warn('Could not access parent window, falling back to normal redirect');
+      // Try postMessage first (more compatible with cross-origin setups)
+      console.log('Attempting to postMessage to parent with checkout URL');
+      window.parent.postMessage({
+        type: 'YAKKT_CHECKOUT',
+        payload: { checkoutUrl: url, addUrl: url }
+      }, '*');
+      
+      // If postMessage doesn't get intercepted, after a short delay try direct redirect as fallback
+      const redirectTimeout = setTimeout(() => {
+        try {
+          // Check if window.top is accessible (this may fail for cross-origin iframes)
+          if (window.top) {
+            console.log('Falling back to direct parent redirection');
+            window.top.location.href = url;
+          }
+        } catch (e) {
+          console.warn('Could not access parent window for direct redirect');
+          window.location.href = url; // Final fallback
+        }
+      }, 300);
+
+      // Add a flag to know we're trying the iframe navigation approach
+      (window as any).__checkoutRedirectAttempted = true;
+      
+      return;
+    } catch (e) {
+      console.warn('Failed to communicate with parent window:', e);
+      // Continue to default redirect
     }
   }
 
   // Default redirect if we're not in an iframe or can't access the parent
-  window.location.href = checkoutUrl;
+  console.log('Performing standard window location redirect');
+  window.location.href = url;
 }; 
