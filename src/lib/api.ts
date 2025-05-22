@@ -11,6 +11,8 @@ interface CheckoutPayload {
     id: string;
     name: string;
     price?: number;
+    description?: string;
+    category?: string;
   }>;
   totalPrice: number;
 }
@@ -40,7 +42,9 @@ export const createOrder = async (
       components: selectedComponents.map(component => ({
         id: component.id,
         name: component.name,
-        price: component.price
+        price: component.price,
+        description: component.description || '',
+        category: component.category || ''
       })),
       totalPrice: totalPrice
     };
