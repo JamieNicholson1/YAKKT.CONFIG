@@ -6,6 +6,15 @@ interface PriceDisplayProps {
   detailed?: boolean;
 }
 
+// Items excluded from the cumulative discount calculation
+const EXCLUDED_FROM_DISCOUNT = [
+  'fiamma-awning',        // Fiamma F45s Awning
+  'bravo-snorkel',        // Bravo Snorkel
+  'front-bull-bar',       // Front Bull Bar
+  'lazer-lights-grille',  // Lazer Lights
+  'awning-brackets'       // Awning Brackets
+];
+
 const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
   const { priceData, options } = useConfiguratorStore();
   const { totalPrice, addOnPrices } = priceData;
@@ -17,22 +26,38 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
 
   // Calculate savings based on total price using tiered discount system
   const calculateSavings = (total: number): { percentage: number; amount: number } => {
-    if (total < 1750) return { percentage: 0, amount: 0 };
+    // Calculate the sum of excluded item prices
+    const excludedItemsTotal = Object.entries(addOnPrices).reduce((sum, [id, price]) => {
+      if (EXCLUDED_FROM_DISCOUNT.includes(id)) {
+        return sum + price;
+      }
+      return sum;
+    }, 0);
     
-    const amountOver1750 = total - 1750;
+    // Subtract excluded items from the total for discount calculation
+    const discountableTotal = total - excludedItemsTotal;
+    
+    if (discountableTotal < 1750) return { percentage: 0, amount: 0 };
+    
+    const amountOver1750 = discountableTotal - 1750;
     const savingTiers = Math.floor(amountOver1750 / 200);
     const savingPercentage = Math.min(savingTiers + 1, 12.5); // Cap at 12.5%
-    const savingAmount = (total * savingPercentage) / 100;
+    
+    // Apply discount only to the discountable amount
+    const savingAmount = (discountableTotal * savingPercentage) / 100;
+    
+    // Calculate effective percentage based on total price including excluded items
+    const effectivePercentage = total > 0 ? (savingAmount / total) * 100 : 0;
     
     return {
-      percentage: savingPercentage,
+      percentage: effectivePercentage,
       amount: savingAmount
     };
   };
 
   // Get savings amount and percentage
   const savings = calculateSavings(totalPrice);
-  const savingsPercentage = savings.percentage;
+  const savingsPercentage = Math.round(savings.percentage * 10) / 10; // Round to 1 decimal place
 
   // Get option description
   const getOptionDescription = (id: string) => {
@@ -109,7 +134,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
           <div>
             <div className="font-bold text-amber-800 text-lg">{savingsPercentage}% Discount</div>
             <div className="text-sm text-amber-700">
-              When purchased as a bundle
+              Applied to eligible items when purchased as a bundle
             </div>
           </div>
         </div>
@@ -138,6 +163,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
                   const option = getOption(id);
                   const optionName = option ? option.name : id;
                   const description = getOptionDescription(id);
+                  const isExcludedFromDiscount = EXCLUDED_FROM_DISCOUNT.includes(id);
                   
                   // Track the expanded state of this specific item
                   const isItemExpanded = expandedItemIds.includes(id);
@@ -153,6 +179,11 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
                         <div className="flex-grow flex justify-between items-center w-full">
                           <span className="text-gray-900 text-sm font-medium truncate pr-2 max-w-[60%]">
                             {optionName}
+                            {isExcludedFromDiscount && (
+                              <span className="ml-1 text-xs bg-gray-100 text-gray-600 px-1 py-0.5 rounded inline-block">
+                                No Discount
+                              </span>
+                            )}
                           </span>
                           <div className="flex items-center flex-shrink-0 ml-auto">
                             <span className="text-amber-500 text-sm mr-2 whitespace-nowrap">+£{price.toLocaleString()}</span>
@@ -169,6 +200,11 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
                       {isItemExpanded && description && (
                         <div className="p-3 bg-gray-50 border-t border-gray-100 text-sm text-gray-700">
                           {description}
+                          {isExcludedFromDiscount && (
+                            <div className="mt-2 text-xs text-gray-500 italic">
+                              This item is excluded from the bundle discount.
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -219,12 +255,22 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
       <div className="p-4 space-y-4">
         {Object.entries(addOnPrices).length > 0 ? (
           <div className="space-y-3">
-            {Object.entries(addOnPrices).map(([id, price]) => (
-              <div key={id} className="flex justify-between items-center text-sm">
-                <span className="text-gray-600 truncate pr-2 max-w-[60%]">• {getOption(id)?.name || id}</span>
-                <span className="text-amber-600 flex-shrink-0 whitespace-nowrap">+£{price.toLocaleString()}</span>
-              </div>
-            ))}
+            {Object.entries(addOnPrices).map(([id, price]) => {
+              const isExcludedFromDiscount = EXCLUDED_FROM_DISCOUNT.includes(id);
+              return (
+                <div key={id} className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600 truncate pr-2 max-w-[60%]">
+                    • {getOption(id)?.name || id}
+                    {isExcludedFromDiscount && (
+                      <span className="ml-1 text-xs bg-gray-100 text-gray-600 px-1 py-0.5 rounded inline-block">
+                        Fixed Price
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-amber-600 flex-shrink-0 whitespace-nowrap">+£{price.toLocaleString()}</span>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="text-sm text-gray-500">No items selected</div>
