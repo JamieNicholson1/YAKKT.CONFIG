@@ -42,8 +42,8 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
     // Custom descriptions based on product name
     const customDescriptions: Record<string, string> = {
       "Flares": "Extend van width for extra space. Sleek design.",
-      "Black Rhino Warlord BFG AT": "17\" Black Dark Tint wheels with 225/65/17 BF Goodrich T/A KO2 tyres.",
-      "Black Rhino Warlord": "17\" Black Dark Tint wheels with 225/65/17 BF Goodrich T/A KO2 tyres.",
+      "Black Rhino Warlord BFG AT": "17\" Black Dark Tint wheels with 225/65/17 BF Goodrich T/A KO2 tyres. (Visual Only)",
+      "Black Rhino Warlord": "17\" Black Dark Tint wheels with 225/65/17 BF Goodrich T/A KO2 tyres. (Visual Only)",
       "Bravo Snorkel": "Raise air intake. Protects engine off-road.",
       "Front Bull Bar": "Front-end protection. Strong, clean design.",
       "Lazer Lights - Grille": "Grille-mounted Lazer LED lights for enhanced visibility.",
@@ -58,7 +58,6 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
       "Awning Brackets": "Set of 3 brackets. Powder-coated 5083 aluminum.",
       "Fiamma F45s Awning 3.2m": "3.2m durable awning. Black/anthracite.",
       "Side Ladder": "5083 aluminum ladder. Powder-coated black.",
-      "10x L-Track Eyelets": "10 strong eyelets. Secure your gear.",
       "Front Runner Wolfpack Pro - 2x L": "Two Front Runner WolfPack Pro storage boxes (Left side), robust and stackable.",
       "Front Runner Wolfpack Pro - 2x R": "Two Front Runner WolfPack Pro storage boxes (Right side), robust and stackable.",
       "Front Runner Wolfpack Pro - 1x M": "Single Front Runner WolfPack Pro storage box (Middle), robust and stackable.",

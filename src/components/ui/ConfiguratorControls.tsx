@@ -88,17 +88,17 @@ const ConfiguratorControls: React.FC = () => {
           category: 'wheels' as const,
           isExclusive: true,
           conflictsWith: ['black-rhino-wheels'],
-          description: 'Standard VW Crafter wheels',
+          description: 'Standard VW Crafter wheels (Visual Only)',
         },
         {
           id: 'black-rhino-wheels',
           name: 'Black Rhino Warlord BFG AT',
-          price: 2000,
+          price: 0,
           modelUrl: '/models/van-models/mwb-crafter/wheels/black-rhino-at.glb',
           category: 'wheels' as const,
           isExclusive: true,
           conflictsWith: ['standard-wheels'],
-          description: 'Black Rhino all-terrain wheels',
+          description: 'Black Rhino all-terrain wheels (Visual Only)',
         },
 
         // Roof Racks
@@ -198,16 +198,6 @@ const ConfiguratorControls: React.FC = () => {
           conflictsWith: [],
           dependsOn: ['roof-rack-base', 'rear-deck', 'rear-deck-maxxfan', 'middle-deck', 'front-deck'],
           description: 'Access ladder for roof rack',
-        },
-        {
-          id: 'l-track-eyelets',
-          name: '10x L-Track Eyelets',
-          price: 20,
-          category: 'roof-rack-accessories' as const,
-          isExclusive: false,
-          conflictsWith: [],
-          dependsOn: ['roof-rack-base'],
-          description: 'Set of 10 L-Track mounting eyelets',
         },
         {
           id: 'front-runner-wolfpack-pro-2x-l',
