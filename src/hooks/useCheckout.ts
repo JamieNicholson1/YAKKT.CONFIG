@@ -49,22 +49,26 @@ const useCheckout = () => {
         return component;
       });
 
-      // Create the order
+      // Create the order using finalPrice (after discount) instead of totalPrice
       const response = await createOrder(
         selectedChassis.id,
         selectedChassis.name,
         selectedComponents,
-        priceData.totalPrice
+        priceData.finalPrice
       );
 
       setState({
         isLoading: false,
         error: null,
-        orderId: response.orderId,
+        orderId: response.orderId || null,
       });
 
       // Redirect to checkout
-      redirectToCheckout(response.checkoutUrl);
+      if (response.checkoutUrl) {
+        redirectToCheckout(response.checkoutUrl);
+      } else {
+        throw new Error('No checkout URL provided in the response');
+      }
     } catch (error) {
       setState({
         ...state,

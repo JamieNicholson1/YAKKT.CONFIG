@@ -1,84 +1,57 @@
 import React from 'react';
 import useConfiguratorStore from '@/store/configurator';
-import { Truck, Sparkles, Clock } from 'lucide-react';
-import { VanOption } from '@/types/configurator';
+import { Truck, Sparkles, Clock, AlertCircle } from 'lucide-react';
+
+// List of items excluded from discount
+const DISCOUNT_EXCLUDED_ITEMS = [
+  'flares', // Flares
+  'front-bull-bar', // Bull bar
+  'lazer-lights-grille', // Grille lights
+  'bravo-snorkel', // Snorkel
+  'black-rhino-wheels', // Premium wheels - corrected ID
+  'standard-wheels', // Standard wheels
+  'fiamma-awning', // Fiamma awning - corrected ID
+  'front-runner-wolfpack-pro-2x-l', // Front Runner Wolfpack - Left
+  'front-runner-wolfpack-pro-2x-r', // Front Runner Wolfpack - Right
+  'front-runner-wolfpack-pro-1x-m', // Front Runner Wolfpack - Middle
+];
+
+// Items that are purely visual and should not appear in the summary
+const VISUAL_ONLY_ITEMS = [
+  'black-rhino-wheels',
+  'standard-wheels'
+];
+
+// Helper function to check if an item is excluded from discount
+const isExcludedFromDiscount = (id: string) => {
+  return DISCOUNT_EXCLUDED_ITEMS.includes(id);
+};
+
+// Helper function to check if an item is visual only
+const isVisualOnly = (id: string) => {
+  return VISUAL_ONLY_ITEMS.includes(id);
+};
 
 interface PriceDisplayProps {
   detailed?: boolean;
 }
 
-// This should be kept in sync with the one in the store, or ideally imported if possible
-// For now, duplicating here for use in PriceDisplay's specific logic.
-const NON_DISCOUNTABLE_ITEM_IDS = [
-  'flares',
-  'front-bull-bar',
-  'lazer-lights-grille',
-  'fiamma-awning',
-  'front-runner-wolfpack-pro-2x-l',
-  'front-runner-wolfpack-pro-2x-r',
-  'front-runner-wolfpack-pro-1x-m'
-];
-
 const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
-  const { priceData, options, selectedOptionIds } = useConfiguratorStore();
-  const { totalPrice, addOnPrices } = priceData;
+  const { priceData, options } = useConfiguratorStore();
+  const { 
+    totalPrice, 
+    addOnPrices, 
+    discountPercentage, 
+    discountAmount, 
+    finalPrice,
+    discountablePrice,
+    nonDiscountablePrice
+  } = priceData;
 
   // Helper function to get option details from ID
-  const getOption = (id: string): VanOption | undefined => {
+  const getOption = (id: string) => {
     return options.find(opt => opt.id === id);
   };
-
-  // Calculate savings based on total price using tiered discount system,
-  // excluding non-discountable items from the discount calculation.
-  const calculateSavings = (
-    currentTotalPrice: number,
-    currentSelectedOptionIds: Set<string>,
-    allOptions: VanOption[]
-  ): { percentage: number; amount: number; finalPrice: number; discountableSubtotal: number; nonDiscountableSubtotal: number } => {
-    
-    let nonDiscountableSubtotal = 0;
-    currentSelectedOptionIds.forEach(optionId => {
-      if (NON_DISCOUNTABLE_ITEM_IDS.includes(optionId)) {
-        const option = allOptions.find(opt => opt.id === optionId);
-        nonDiscountableSubtotal += option?.price || 0;
-      }
-    });
-
-    const discountableSubtotal = currentTotalPrice - nonDiscountableSubtotal;
-
-    if (discountableSubtotal < 1750) {
-      return { 
-        percentage: 0, 
-        amount: 0, 
-        finalPrice: currentTotalPrice, 
-        discountableSubtotal, 
-        nonDiscountableSubtotal 
-      };
-    }
-    
-    const amountOver1750 = discountableSubtotal - 1750;
-    const savingTiers = Math.floor(amountOver1750 / 200);
-    const savingPercentage = Math.min(savingTiers + 1, 12.5); // Cap at 12.5%
-    const savingAmount = (discountableSubtotal * savingPercentage) / 100;
-    const finalPrice = currentTotalPrice - savingAmount;
-    
-    return {
-      percentage: savingPercentage,
-      amount: savingAmount,
-      finalPrice,
-      discountableSubtotal,
-      nonDiscountableSubtotal
-    };
-  };
-
-  // Get savings amount and percentage
-  const { 
-    percentage: savingsPercentage, 
-    amount: savingsAmount, 
-    finalPrice,
-    // discountableSubtotal, // For debugging if needed
-    // nonDiscountableSubtotal // For debugging if needed
-  } = calculateSavings(totalPrice, selectedOptionIds, options);
 
   // Get option description
   const getOptionDescription = (id: string) => {
@@ -143,40 +116,79 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
     }
   };
 
+  // Filter out visual-only items from the addOnPrices for display
+  const filteredAddOnPrices = Object.entries(addOnPrices)
+    .filter(([id]) => !isVisualOnly(id))
+    .reduce((acc, [id, price]) => {
+      acc[id] = price;
+      return acc;
+    }, {} as Record<string, number>);
+
+  // Group options by discount eligibility (excluding visual-only items)
+  const groupedOptions = Object.entries(filteredAddOnPrices).reduce(
+    (acc, [id, price]) => {
+      if (isExcludedFromDiscount(id)) {
+        acc.excluded.push({ id, price });
+      } else {
+        acc.included.push({ id, price });
+      }
+      return acc;
+    },
+    { included: [] as { id: string; price: number }[], excluded: [] as { id: string; price: number }[] }
+  );
+
   if (detailed) {
     return (
       <div className="space-y-6 font-mono">
-        {/* Bundle deal savings badge - now more prominent */}
-        {savingsAmount > 0 && (
-          <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-lg p-4 flex items-center shadow-sm">
+        {/* 12.5% Discount banner - more compact and with smaller font */}
+        {discountPercentage > 0 && (
+          <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-lg p-3 flex items-center shadow-sm">
             <div className="flex-shrink-0 mr-3">
               <div className="bg-amber-500/20 p-2 rounded-full">
-                <Sparkles className="w-5 h-5 text-amber-600" />
+                <Sparkles className="w-4 h-4 text-amber-600" />
               </div>
             </div>
             <div>
-              <div className="font-bold text-amber-800 text-lg">
-                Save £{savingsAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({savingsPercentage.toFixed(1)}%)
-              </div>
-              <div className="text-sm text-amber-700">
-                Bundle discount applied to eligible items!
+              <div className="font-medium text-amber-800 text-base">{discountPercentage}% Discount</div>
+              <div className="text-xs text-amber-700">
+                When purchased as a bundle
               </div>
             </div>
           </div>
         )}
         
-        {/* Selected Options with thumbnails */}
-        {Object.entries(addOnPrices).length > 0 && (
+        {/* Price Breakdown - reduced font sizes */}
+        <div className="rounded-lg border border-gray-200 p-3 space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-700 text-sm">Subtotal</span>
+            <span className="text-sm">£{totalPrice.toLocaleString()}</span>
+          </div>
+          
+          {discountAmount > 0 && (
+            <div className="flex justify-between items-center text-amber-600">
+              <span className="text-sm">Bundle Discount ({discountPercentage}%)</span>
+              <span className="text-sm">-£{discountAmount.toLocaleString()}</span>
+            </div>
+          )}
+          
+          <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
+            <span className="text-gray-900 text-sm font-medium">Total Price</span>
+            <span className="text-base font-medium text-black">£{finalPrice.toLocaleString()}</span>
+          </div>
+        </div>
+        
+        {/* Selected Options with thumbnails - smaller headings */}
+        {Object.entries(filteredAddOnPrices).length > 0 && (
           <div className="rounded-lg border border-gray-200 overflow-hidden">
-            <div className="bg-gray-50 p-3 border-b border-gray-200">
+            <div className="bg-gray-50 p-2 border-b border-gray-200">
               <button 
                 onClick={() => setExpandedItems(prev => !prev)} 
-                className="flex justify-between items-center w-full font-semibold text-sm text-gray-900 uppercase tracking-wide"
+                className="flex justify-between items-center w-full font-medium text-xs text-gray-900 uppercase tracking-wide"
                 aria-expanded={expandedItems}
               >
-                <span>What&apos;s Included ({Object.entries(addOnPrices).length} items)</span>
+                <span>What&apos;s Included ({Object.entries(filteredAddOnPrices).length} items)</span>
                 <div className={`transition-transform duration-200 ${expandedItems ? 'rotate-180' : ''}`}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="m6 9 6 6 6-6"/>
                   </svg>
                 </div>
@@ -184,57 +196,107 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
             </div>
             
             {expandedItems && (
-              <div className="p-3 space-y-2">
-                {Object.entries(addOnPrices).map(([id, price]) => {
-                  const option = getOption(id);
-                  const optionName = option ? option.name : id;
-                  const description = getOptionDescription(id);
-                  
-                  // Track the expanded state of this specific item
-                  const isItemExpanded = expandedItemIds.includes(id);
-                  
-                  return (
-                    <div key={id} className="border border-gray-100 rounded-md overflow-hidden">
-                      {/* Item header with expand/collapse functionality */}
-                      <div 
-                        className="flex items-center p-2 cursor-pointer bg-gray-50 hover:bg-gray-100"
-                        onClick={() => toggleItemExpanded(id)}
-                      >
-                        {/* Item details */}
-                        <div className="flex-grow flex justify-between items-center w-full">
-                          <span className="text-gray-900 text-sm font-medium truncate pr-2 max-w-[60%]">
-                            {optionName}
-                          </span>
-                          <div className="flex items-center flex-shrink-0 ml-auto">
-                            <span className={`text-sm mr-2 whitespace-nowrap ${NON_DISCOUNTABLE_ITEM_IDS.includes(id) ? 'text-gray-500' : 'text-amber-500'}`}>
-                              +£{price.toLocaleString()}
-                              {NON_DISCOUNTABLE_ITEM_IDS.includes(id) && <span className="text-xs text-gray-400 ml-1">(Full Price)</span>}
-                            </span>
-                            <div className={`transition-transform duration-200 w-5 flex items-center justify-center ${isItemExpanded ? 'rotate-180' : ''}`}>
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="m6 9 6 6 6-6"/>
-                              </svg>
+              <div className="p-2 space-y-3">
+                {/* Discount-eligible components */}
+                {groupedOptions.included.length > 0 && (
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-medium text-gray-700 flex items-center">
+                      <Sparkles className="w-3 h-3 mr-1 text-amber-500" />
+                      Discount-Eligible Components
+                    </h3>
+                    <div className="space-y-1 pl-1">
+                      {groupedOptions.included.map(({ id, price }) => {
+                        const option = getOption(id);
+                        const optionName = option ? option.name : id;
+                        const description = getOptionDescription(id);
+                        const isItemExpanded = expandedItemIds.includes(id);
+                        
+                        return (
+                          <div key={id} className="border border-gray-100 rounded-md overflow-hidden">
+                            <div 
+                              className="flex items-center p-1.5 cursor-pointer bg-gray-50 hover:bg-gray-100"
+                              onClick={() => toggleItemExpanded(id)}
+                            >
+                              <div className="flex-grow flex justify-between items-center w-full">
+                                <span className="text-gray-900 text-sm font-medium truncate pr-2 max-w-[65%]">
+                                  {optionName}
+                                </span>
+                                <div className="flex items-center flex-shrink-0 ml-auto">
+                                  <span className="text-amber-500 text-sm mr-1 whitespace-nowrap">+£{price.toLocaleString()}</span>
+                                  <div className={`transition-transform duration-200 w-4 flex items-center justify-center ${isItemExpanded ? 'rotate-180' : ''}`}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="m6 9 6 6 6-6"/>
+                                    </svg>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
+                            
+                            {isItemExpanded && description && (
+                              <div className="p-2 bg-gray-50 border-t border-gray-100 text-sm text-gray-700">
+                                {description}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </div>
-                      
-                      {/* Expandable description area */}
-                      {isItemExpanded && description && (
-                        <div className="p-3 bg-gray-50 border-t border-gray-100 text-sm text-gray-700">
-                          {description}
-                        </div>
-                      )}
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+                )}
+                
+                {/* Non-discountable components */}
+                {groupedOptions.excluded.length > 0 && (
+                  <div className="space-y-1">
+                    <h3 className="text-xs font-medium text-gray-700 flex items-center">
+                      <AlertCircle className="w-3 h-3 mr-1 text-gray-500" />
+                      Components Not Eligible for Discount
+                    </h3>
+                    <div className="space-y-1 pl-1">
+                      {groupedOptions.excluded.map(({ id, price }) => {
+                        const option = getOption(id);
+                        const optionName = option ? option.name : id;
+                        const description = getOptionDescription(id);
+                        const isItemExpanded = expandedItemIds.includes(id);
+                        
+                        return (
+                          <div key={id} className="border border-gray-100 rounded-md overflow-hidden">
+                            <div 
+                              className="flex items-center p-1.5 cursor-pointer bg-gray-50 hover:bg-gray-100"
+                              onClick={() => toggleItemExpanded(id)}
+                            >
+                              <div className="flex-grow flex justify-between items-center w-full">
+                                <span className="text-gray-900 text-sm font-medium truncate pr-2 max-w-[65%]">
+                                  {optionName}
+                                </span>
+                                <div className="flex items-center flex-shrink-0 ml-auto">
+                                  <span className="text-gray-500 text-sm mr-1 whitespace-nowrap">+£{price.toLocaleString()}</span>
+                                  <div className={`transition-transform duration-200 w-4 flex items-center justify-center ${isItemExpanded ? 'rotate-180' : ''}`}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="m6 9 6 6 6-6"/>
+                                    </svg>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {isItemExpanded && description && (
+                              <div className="p-2 bg-gray-50 border-t border-gray-100 text-sm text-gray-700">
+                                {description}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
         
-        {/* Delivery estimate - NEW SECTION */}
-        <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+        {/* Delivery estimate - updated with smaller fonts */}
+        <div className="rounded-lg border border-gray-200 p-3 space-y-2">
           <div className="flex items-center">
             <Clock className="w-4 h-4 mr-2 text-gray-600" />
             <span className="text-sm font-medium text-gray-800">Delivery Estimate</span>
@@ -252,53 +314,48 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
             Free shipping within mainland UK
           </div>
         </div>
-        
-        {/* Payment options */}
-        <div className="rounded-lg border border-gray-200 p-4 space-y-3">
-          {savingsAmount > 0 && (
-            <div className="flex justify-between items-center text-sm text-green-600">
-              <span>Bundle Discount</span>
-              <span>- £{savingsAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            </div>
-          )}
-          <div className="flex justify-between items-center text-sm text-gray-700">
-            <span>Subtotal (Before Discount)</span>
-            <span>£{totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          </div>
-          <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-            <span className="text-gray-900 font-medium text-lg">Total Price</span>
-            <span className="text-2xl font-bold text-black">£{finalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-          </div>
-        </div>
       </div>
     );
   }
 
+  // Simplified view for non-detailed display
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden font-mono">
-      <div className="bg-gray-50 p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 tracking-tight">
-          Configuration Total
-        </h2>
+      <div className="bg-gray-50 p-3 border-b border-gray-200">
+        <h2 className="text-sm font-medium text-gray-900 tracking-tight">What&apos;s Included ({Object.entries(filteredAddOnPrices).length} Items)</h2>
       </div>
-      <div className="p-4 space-y-2">
-        {Object.entries(addOnPrices).length > 0 && savingsAmount > 0 && (
-          <div className="flex justify-between items-center text-sm text-green-700">
-            <span>Bundle Savings</span>
-            <span className="font-medium">- £{savingsAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+      
+      <div className="p-3 space-y-3">
+        {/* Discount-eligible components */}
+        {groupedOptions.included.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-gray-700 flex items-center">
+              <Sparkles className="w-4 h-4 mr-1 text-amber-500" />
+              Discount-Eligible Components
+            </h3>
+            {groupedOptions.included.map(({ id, price }) => (
+              <div key={id} className="flex justify-between items-center text-sm">
+                <span className="text-gray-600 truncate pr-2 max-w-[65%]">• {getOption(id)?.name || id}</span>
+                <span className="text-amber-600 flex-shrink-0 whitespace-nowrap">+£{price.toLocaleString()}</span>
+              </div>
+            ))}
           </div>
         )}
-        <div className="flex justify-between items-center text-xl">
-          <span className="text-gray-900 font-semibold">Total Price</span>
-          <span className="text-black font-bold">£{finalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-        </div>
-         {Object.entries(addOnPrices).length > 0 && totalPrice !== finalPrice && (
-          <div className="text-xs text-gray-500 text-right">
-            (was £{totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+        
+        {/* Non-discountable components */}
+        {groupedOptions.excluded.length > 0 && (
+          <div className="space-y-2 pt-3 mt-3 border-t border-gray-100">
+            <h3 className="text-sm font-medium text-gray-700 flex items-center">
+              <AlertCircle className="w-4 h-4 mr-1 text-gray-500" />
+              Components Not Eligible for Discount
+            </h3>
+            {groupedOptions.excluded.map(({ id, price }) => (
+              <div key={id} className="flex justify-between items-center text-sm">
+                <span className="text-gray-600 truncate pr-2 max-w-[65%]">• {getOption(id)?.name || id}</span>
+                <span className="text-gray-500 flex-shrink-0 whitespace-nowrap">+£{price.toLocaleString()}</span>
+              </div>
+            ))}
           </div>
-        )}
-        {Object.entries(addOnPrices).length === 0 && (
-          <div className="text-sm text-gray-500">Select options to see price.</div>
         )}
       </div>
     </div>

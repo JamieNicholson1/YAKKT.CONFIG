@@ -27,7 +27,12 @@ export interface ConfigSelection {
 export interface PriceData {
   totalPrice: number;
   chassisPrice: number;
+  discountablePrice: number;
+  nonDiscountablePrice: number;
   addOnPrices: Record<string, number>;
+  discountPercentage: number;
+  discountAmount: number;
+  finalPrice: number;
 }
 
 export interface ConfiguratorState extends ConfigSelection {

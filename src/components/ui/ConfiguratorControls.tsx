@@ -93,7 +93,7 @@ const ConfiguratorControls: React.FC = () => {
         {
           id: 'black-rhino-wheels',
           name: 'Black Rhino Warlord BFG AT',
-          price: 2000,
+          price: 0,
           modelUrl: '/models/van-models/mwb-crafter/wheels/black-rhino-at.glb',
           category: 'wheels' as const,
           isExclusive: true,
@@ -198,16 +198,6 @@ const ConfiguratorControls: React.FC = () => {
           conflictsWith: [],
           dependsOn: ['roof-rack-base', 'rear-deck', 'rear-deck-maxxfan', 'middle-deck', 'front-deck'],
           description: 'Access ladder for roof rack',
-        },
-        {
-          id: 'l-track-eyelets',
-          name: '10x L-Track Eyelets',
-          price: 20,
-          category: 'roof-rack-accessories' as const,
-          isExclusive: false,
-          conflictsWith: [],
-          dependsOn: ['roof-rack-base'],
-          description: 'Set of 10 L-Track mounting eyelets',
         },
         {
           id: 'front-runner-wolfpack-pro-2x-l',
@@ -572,7 +562,8 @@ const ConfiguratorControls: React.FC = () => {
                                     font-medium text-sm min-w-[100px] text-right
                                     ${isSelected ? 'text-amber-600' : 'text-gray-600'}
                                   `}>
-                                    {option.price === 0 ? 'Base Model' : `+ £${option.price.toLocaleString()}`}
+                                    {option.id === 'black-rhino-wheels' || option.id === 'standard-wheels' ? 'Visual' : 
+                                      option.price === 0 ? 'Base Model' : `+ £${option.price.toLocaleString()}`}
                                   </div>
                                 </div>
                               </button>

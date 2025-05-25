@@ -66,12 +66,16 @@ const ConfiguratorLayout: React.FC = () => {
 
   // Calculate savings based on total price
   const calculateSavings = (total: number): { percentage: number; amount: number } => {
-    if (total < 1750) return { percentage: 0, amount: 0 };
+    // We should use the discountablePrice from the store instead of the total price
+    const { priceData } = useConfiguratorStore.getState();
+    const { discountablePrice } = priceData;
     
-    const amountOver1750 = total - 1750;
+    if (discountablePrice < 1750) return { percentage: 0, amount: 0 };
+    
+    const amountOver1750 = discountablePrice - 1750;
     const savingTiers = Math.floor(amountOver1750 / 200);
-    const savingPercentage = Math.min(savingTiers + 1, 12.5); // Cap at 12.5%
-    const savingAmount = (total * savingPercentage) / 100;
+    const savingPercentage = Math.min(savingTiers + 1, 17.5); // Increased cap from 12.5% to 17.5%
+    const savingAmount = Math.round((discountablePrice * savingPercentage) / 100);
     
     return {
       percentage: savingPercentage,
@@ -990,7 +994,7 @@ const ConfiguratorLayout: React.FC = () => {
           <div className="flex items-center justify-between gap-4">
             <div className="flex flex-col">
               <span className="text-xs text-gray-500 font-mono">Total Price</span>
-              <span className="text-lg font-bold font-mono">£{totalPrice.toLocaleString()}</span>
+              <span className="text-lg font-bold font-mono">£{priceData.finalPrice.toLocaleString()}</span>
               {savings.percentage > 0 && (
                 <span className="text-xs text-green-600 font-mono">
                   Save {savings.percentage}% (£{savings.amount.toFixed(0)})
