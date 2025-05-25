@@ -1,63 +1,84 @@
 import React from 'react';
 import useConfiguratorStore from '@/store/configurator';
 import { Truck, Sparkles, Clock } from 'lucide-react';
+import { VanOption } from '@/types/configurator';
 
 interface PriceDisplayProps {
   detailed?: boolean;
 }
 
-// Items excluded from the cumulative discount calculation
-const EXCLUDED_FROM_DISCOUNT = [
-  'fiamma-awning',        // Fiamma F45s Awning
-  'bravo-snorkel',        // Bravo Snorkel
-  'front-bull-bar',       // Front Bull Bar
-  'lazer-lights-grille',  // Lazer Lights
-  'awning-brackets'       // Awning Brackets
+// This should be kept in sync with the one in the store, or ideally imported if possible
+// For now, duplicating here for use in PriceDisplay's specific logic.
+const NON_DISCOUNTABLE_ITEM_IDS = [
+  'flares',
+  'front-bull-bar',
+  'lazer-lights-grille',
+  'fiamma-awning',
+  'front-runner-wolfpack-pro-2x-l',
+  'front-runner-wolfpack-pro-2x-r',
+  'front-runner-wolfpack-pro-1x-m'
 ];
 
 const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
-  const { priceData, options } = useConfiguratorStore();
+  const { priceData, options, selectedOptionIds } = useConfiguratorStore();
   const { totalPrice, addOnPrices } = priceData;
 
   // Helper function to get option details from ID
-  const getOption = (id: string) => {
+  const getOption = (id: string): VanOption | undefined => {
     return options.find(opt => opt.id === id);
   };
 
-  // Calculate savings based on total price using tiered discount system
-  const calculateSavings = (total: number): { percentage: number; amount: number } => {
-    // Calculate the sum of excluded item prices
-    const excludedItemsTotal = Object.entries(addOnPrices).reduce((sum, [id, price]) => {
-      if (EXCLUDED_FROM_DISCOUNT.includes(id)) {
-        return sum + price;
+  // Calculate savings based on total price using tiered discount system,
+  // excluding non-discountable items from the discount calculation.
+  const calculateSavings = (
+    currentTotalPrice: number,
+    currentSelectedOptionIds: Set<string>,
+    allOptions: VanOption[]
+  ): { percentage: number; amount: number; finalPrice: number; discountableSubtotal: number; nonDiscountableSubtotal: number } => {
+    
+    let nonDiscountableSubtotal = 0;
+    currentSelectedOptionIds.forEach(optionId => {
+      if (NON_DISCOUNTABLE_ITEM_IDS.includes(optionId)) {
+        const option = allOptions.find(opt => opt.id === optionId);
+        nonDiscountableSubtotal += option?.price || 0;
       }
-      return sum;
-    }, 0);
+    });
+
+    const discountableSubtotal = currentTotalPrice - nonDiscountableSubtotal;
+
+    if (discountableSubtotal < 1750) {
+      return { 
+        percentage: 0, 
+        amount: 0, 
+        finalPrice: currentTotalPrice, 
+        discountableSubtotal, 
+        nonDiscountableSubtotal 
+      };
+    }
     
-    // Subtract excluded items from the total for discount calculation
-    const discountableTotal = total - excludedItemsTotal;
-    
-    if (discountableTotal < 1750) return { percentage: 0, amount: 0 };
-    
-    const amountOver1750 = discountableTotal - 1750;
+    const amountOver1750 = discountableSubtotal - 1750;
     const savingTiers = Math.floor(amountOver1750 / 200);
     const savingPercentage = Math.min(savingTiers + 1, 12.5); // Cap at 12.5%
-    
-    // Apply discount only to the discountable amount
-    const savingAmount = (discountableTotal * savingPercentage) / 100;
-    
-    // Calculate effective percentage based on total price including excluded items
-    const effectivePercentage = total > 0 ? (savingAmount / total) * 100 : 0;
+    const savingAmount = (discountableSubtotal * savingPercentage) / 100;
+    const finalPrice = currentTotalPrice - savingAmount;
     
     return {
-      percentage: effectivePercentage,
-      amount: savingAmount
+      percentage: savingPercentage,
+      amount: savingAmount,
+      finalPrice,
+      discountableSubtotal,
+      nonDiscountableSubtotal
     };
   };
 
   // Get savings amount and percentage
-  const savings = calculateSavings(totalPrice);
-  const savingsPercentage = Math.round(savings.percentage * 10) / 10; // Round to 1 decimal place
+  const { 
+    percentage: savingsPercentage, 
+    amount: savingsAmount, 
+    finalPrice,
+    // discountableSubtotal, // For debugging if needed
+    // nonDiscountableSubtotal // For debugging if needed
+  } = calculateSavings(totalPrice, selectedOptionIds, options);
 
   // Get option description
   const getOptionDescription = (id: string) => {
@@ -67,8 +88,8 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
     // Custom descriptions based on product name
     const customDescriptions: Record<string, string> = {
       "Flares": "Extend van width for extra space. Sleek design.",
-      "Black Rhino Warlord BFG AT": "17\" Black Dark Tint wheels with 225/65/17 BF Goodrich T/A KO2 tyres. (Visual Only)",
-      "Black Rhino Warlord": "17\" Black Dark Tint wheels with 225/65/17 BF Goodrich T/A KO2 tyres. (Visual Only)",
+      "Black Rhino Warlord BFG AT": "17\" Black Dark Tint wheels with 225/65/17 BF Goodrich T/A KO2 tyres.",
+      "Black Rhino Warlord": "17\" Black Dark Tint wheels with 225/65/17 BF Goodrich T/A KO2 tyres.",
       "Bravo Snorkel": "Raise air intake. Protects engine off-road.",
       "Front Bull Bar": "Front-end protection. Strong, clean design.",
       "Lazer Lights - Grille": "Grille-mounted Lazer LED lights for enhanced visibility.",
@@ -83,6 +104,7 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
       "Awning Brackets": "Set of 3 brackets. Powder-coated 5083 aluminum.",
       "Fiamma F45s Awning 3.2m": "3.2m durable awning. Black/anthracite.",
       "Side Ladder": "5083 aluminum ladder. Powder-coated black.",
+      "10x L-Track Eyelets": "10 strong eyelets. Secure your gear.",
       "Front Runner Wolfpack Pro - 2x L": "Two Front Runner WolfPack Pro storage boxes (Left side), robust and stackable.",
       "Front Runner Wolfpack Pro - 2x R": "Two Front Runner WolfPack Pro storage boxes (Right side), robust and stackable.",
       "Front Runner Wolfpack Pro - 1x M": "Single Front Runner WolfPack Pro storage box (Middle), robust and stackable.",
@@ -125,19 +147,23 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
     return (
       <div className="space-y-6 font-mono">
         {/* Bundle deal savings badge - now more prominent */}
-        <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-lg p-4 flex items-center shadow-sm">
-          <div className="flex-shrink-0 mr-3">
-            <div className="bg-amber-500/20 p-2 rounded-full">
-              <Sparkles className="w-5 h-5 text-amber-600" />
+        {savingsAmount > 0 && (
+          <div className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-lg p-4 flex items-center shadow-sm">
+            <div className="flex-shrink-0 mr-3">
+              <div className="bg-amber-500/20 p-2 rounded-full">
+                <Sparkles className="w-5 h-5 text-amber-600" />
+              </div>
+            </div>
+            <div>
+              <div className="font-bold text-amber-800 text-lg">
+                Save £{savingsAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({savingsPercentage.toFixed(1)}%)
+              </div>
+              <div className="text-sm text-amber-700">
+                Bundle discount applied to eligible items!
+              </div>
             </div>
           </div>
-          <div>
-            <div className="font-bold text-amber-800 text-lg">{savingsPercentage}% Discount</div>
-            <div className="text-sm text-amber-700">
-              Applied to eligible items when purchased as a bundle
-            </div>
-          </div>
-        </div>
+        )}
         
         {/* Selected Options with thumbnails */}
         {Object.entries(addOnPrices).length > 0 && (
@@ -163,7 +189,6 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
                   const option = getOption(id);
                   const optionName = option ? option.name : id;
                   const description = getOptionDescription(id);
-                  const isExcludedFromDiscount = EXCLUDED_FROM_DISCOUNT.includes(id);
                   
                   // Track the expanded state of this specific item
                   const isItemExpanded = expandedItemIds.includes(id);
@@ -179,14 +204,12 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
                         <div className="flex-grow flex justify-between items-center w-full">
                           <span className="text-gray-900 text-sm font-medium truncate pr-2 max-w-[60%]">
                             {optionName}
-                            {isExcludedFromDiscount && (
-                              <span className="ml-1 text-xs bg-gray-100 text-gray-600 px-1 py-0.5 rounded inline-block">
-                                No Discount
-                              </span>
-                            )}
                           </span>
                           <div className="flex items-center flex-shrink-0 ml-auto">
-                            <span className="text-amber-500 text-sm mr-2 whitespace-nowrap">+£{price.toLocaleString()}</span>
+                            <span className={`text-sm mr-2 whitespace-nowrap ${NON_DISCOUNTABLE_ITEM_IDS.includes(id) ? 'text-gray-500' : 'text-amber-500'}`}>
+                              +£{price.toLocaleString()}
+                              {NON_DISCOUNTABLE_ITEM_IDS.includes(id) && <span className="text-xs text-gray-400 ml-1">(Full Price)</span>}
+                            </span>
                             <div className={`transition-transform duration-200 w-5 flex items-center justify-center ${isItemExpanded ? 'rotate-180' : ''}`}>
                               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="m6 9 6 6 6-6"/>
@@ -200,11 +223,6 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
                       {isItemExpanded && description && (
                         <div className="p-3 bg-gray-50 border-t border-gray-100 text-sm text-gray-700">
                           {description}
-                          {isExcludedFromDiscount && (
-                            <div className="mt-2 text-xs text-gray-500 italic">
-                              This item is excluded from the bundle discount.
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
@@ -237,9 +255,19 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
         
         {/* Payment options */}
         <div className="rounded-lg border border-gray-200 p-4 space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-900 font-medium">Total Price</span>
-            <span className="text-xl font-bold text-black">£{totalPrice.toLocaleString()}</span>
+          {savingsAmount > 0 && (
+            <div className="flex justify-between items-center text-sm text-green-600">
+              <span>Bundle Discount</span>
+              <span>- £{savingsAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center text-sm text-gray-700">
+            <span>Subtotal (Before Discount)</span>
+            <span>£{totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+            <span className="text-gray-900 font-medium text-lg">Total Price</span>
+            <span className="text-2xl font-bold text-black">£{finalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
         </div>
       </div>
@@ -249,31 +277,28 @@ const PriceDisplay: React.FC<PriceDisplayProps> = ({ detailed = false }) => {
   return (
     <div className="rounded-lg border border-gray-200 overflow-hidden font-mono">
       <div className="bg-gray-50 p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 tracking-tight">What&apos;s Included ({Object.entries(addOnPrices).length} Items)</h2>
+        <h2 className="text-lg font-semibold text-gray-900 tracking-tight">
+          Configuration Total
+        </h2>
       </div>
-      
-      <div className="p-4 space-y-4">
-        {Object.entries(addOnPrices).length > 0 ? (
-          <div className="space-y-3">
-            {Object.entries(addOnPrices).map(([id, price]) => {
-              const isExcludedFromDiscount = EXCLUDED_FROM_DISCOUNT.includes(id);
-              return (
-                <div key={id} className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600 truncate pr-2 max-w-[60%]">
-                    • {getOption(id)?.name || id}
-                    {isExcludedFromDiscount && (
-                      <span className="ml-1 text-xs bg-gray-100 text-gray-600 px-1 py-0.5 rounded inline-block">
-                        Fixed Price
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-amber-600 flex-shrink-0 whitespace-nowrap">+£{price.toLocaleString()}</span>
-                </div>
-              );
-            })}
+      <div className="p-4 space-y-2">
+        {Object.entries(addOnPrices).length > 0 && savingsAmount > 0 && (
+          <div className="flex justify-between items-center text-sm text-green-700">
+            <span>Bundle Savings</span>
+            <span className="font-medium">- £{savingsAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
-        ) : (
-          <div className="text-sm text-gray-500">No items selected</div>
+        )}
+        <div className="flex justify-between items-center text-xl">
+          <span className="text-gray-900 font-semibold">Total Price</span>
+          <span className="text-black font-bold">£{finalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+         {Object.entries(addOnPrices).length > 0 && totalPrice !== finalPrice && (
+          <div className="text-xs text-gray-500 text-right">
+            (was £{totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+          </div>
+        )}
+        {Object.entries(addOnPrices).length === 0 && (
+          <div className="text-sm text-gray-500">Select options to see price.</div>
         )}
       </div>
     </div>

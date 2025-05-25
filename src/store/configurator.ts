@@ -1,6 +1,16 @@
 import { create } from 'zustand';
 import { ConfiguratorState, VanOption, ConfigSelection } from '@/types/configurator';
 
+const NON_DISCOUNTABLE_ITEM_IDS = [
+  'flares',
+  'front-bull-bar',
+  'lazer-lights-grille',
+  'fiamma-awning',
+  'front-runner-wolfpack-pro-2x-l',
+  'front-runner-wolfpack-pro-2x-r',
+  'front-runner-wolfpack-pro-1x-m'
+];
+
 const calculatePrice = (state: ConfigSelection, options: VanOption[], chassisPrice: number = 0): number => {
   if (!state.chassisId) return 0;
   
